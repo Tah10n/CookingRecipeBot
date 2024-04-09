@@ -11,6 +11,9 @@ public class CookBookTelegramBot extends TelegramWebhookBot {
     private String botName;
     private String botToken;
 
+    public CookBookTelegramBot(String botToken) {
+        super(botToken);
+    }
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
@@ -31,12 +34,10 @@ public class CookBookTelegramBot extends TelegramWebhookBot {
         return webHookPath;
     }
 
+
     @Override
     public String getBotUsername() {
         return botName;
-    }
-    public String getBotToken() {
-        return botToken;
     }
 
     public void setWebHookPath(String webHookPath) {
@@ -45,9 +46,5 @@ public class CookBookTelegramBot extends TelegramWebhookBot {
 
     public void setBotName(String botName) {
         this.botName = botName;
-    }
-
-    public void setBotToken(String botToken) {
-        this.botToken = botToken;
     }
 }
