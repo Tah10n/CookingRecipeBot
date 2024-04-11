@@ -1,7 +1,7 @@
 package org.example.cooking_recipe_bot.controller;
 
 import lombok.AllArgsConstructor;
-import org.example.cooking_recipe_bot.CookBookTelegramBot;
+import org.example.cooking_recipe_bot.bot.CookBookTelegramBot;
 import org.springframework.web.bind.annotation.*;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.Update;
