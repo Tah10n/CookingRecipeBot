@@ -1,63 +1,42 @@
 package org.example.cooking_recipe_bot.bot;
 
+import lombok.Data;
 import org.example.cooking_recipe_bot.constants.BotMessageEnum;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
+import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.starter.SpringWebhookBot;
+import org.telegram.telegrambots.meta.generics.TelegramClient;
+import org.telegram.telegrambots.webhook.starter.SpringTelegramWebhookBot;
+import org.telegram.telegrambots.webhook.starter.TelegramBotsSpringWebhookApplication;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-
-public class CookBookTelegramBot extends SpringWebhookBot {
-    private String webHookPath;
-    private String botName;
-    private String botToken;
-    private TelegramFacade telegramFacade;
-
-    public CookBookTelegramBot(SetWebhook setWebhook, String botToken, TelegramFacade telegramFacade) {
-        super(setWebhook);
-        this.botToken = botToken;
-        this.telegramFacade = telegramFacade;
-
-    }
+import java.util.function.Function;
 
 
-    @Override
-    public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
-        try {
-            return telegramFacade.handleUpdate(update);
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-            return new SendMessage(update.getMessage().getChatId().toString(),
-                    BotMessageEnum.EXCEPTION_ILLEGAL_MESSAGE.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new SendMessage(update.getMessage().getChatId().toString(),
-                    BotMessageEnum.EXCEPTION_WHAT_THE_FUCK.getMessage());
-        }
+
+public class CookBookTelegramBot extends SpringTelegramWebhookBot {
+
+
+    public CookBookTelegramBot(String botPath, Function<Update, BotApiMethod<?>> updateHandler, Runnable setWebhook, Runnable deleteWebhook) {
+        super(botPath, updateHandler, setWebhook, deleteWebhook);
+
     }
 
     @Override
-    public String getBotPath() {
-        return webHookPath;
+    public void runDeleteWebhook() {
+        super.runDeleteWebhook();
     }
-
 
     @Override
-    public String getBotUsername() {
-        return botName;
+    public void runSetWebhook() {
+        super.runSetWebhook();
     }
 
-    public void setWebHookPath(String webHookPath) {
-        this.webHookPath = webHookPath;
-    }
-
-    public void setBotName(String botName) {
-        this.botName = botName;
+    @Override
+    public BotApiMethod<?> consumeUpdate(Update update) {
+        return super.consumeUpdate(update);
     }
 }

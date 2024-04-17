@@ -1,6 +1,7 @@
 package org.example.cooking_recipe_bot.bot.keyboards;
 
 import org.example.cooking_recipe_bot.constants.ButtonNameEnum;
+import org.example.cooking_recipe_bot.entity.User;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
@@ -11,27 +12,45 @@ import java.util.List;
 
 @Component
 public class ReplyKeyboardMaker {
-    public ReplyKeyboardMarkup getMainMenuKeyboard() {
-        KeyboardRow row1 = new KeyboardRow();
-        row1.add(new KeyboardButton(ButtonNameEnum.FIND_RANDOM_RECIPE_BUTTON.getButtonName()));
-        row1.add(new KeyboardButton(ButtonNameEnum.ADD_RECIPE_BUTTON.getButtonName()));
+    private static ReplyKeyboardMarkup createSimpleKeyboard() {
 
+        ReplyKeyboardMarkup replyKeyboardMarkup = ReplyKeyboardMarkup.builder()
+                .keyboardRow(new KeyboardRow(
+                        KeyboardButton.builder().text(ButtonNameEnum.FIND_RANDOM_RECIPE_BUTTON.getButtonName()).build()))
+                .keyboardRow(new KeyboardRow(
+                        KeyboardButton.builder().text(ButtonNameEnum.BREAKFAST_BUTTON.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.LUNCH_BUTTON.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.DINNER_BUTTON.getButtonName()).build()))
+                .keyboardRow(new KeyboardRow(
+                        KeyboardButton.builder().text(ButtonNameEnum.HELP_BUTTON.getButtonName()).build())).build();
 
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton(ButtonNameEnum.BREAKFAST_BUTTON.getButtonName()));
-        row2.add(new KeyboardButton(ButtonNameEnum.LUNCH_BUTTON.getButtonName()));
-        row2.add(new KeyboardButton(ButtonNameEnum.DINNER_BUTTON.getButtonName()));
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
+        replyKeyboardMarkup.setOneTimeKeyboard(false);
 
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add(new KeyboardButton(ButtonNameEnum.HELP_BUTTON.getButtonName()));
+        return replyKeyboardMarkup;
+    }
 
-        List<KeyboardRow> keyboard = new ArrayList<>();
-        keyboard.add(row1);
-        keyboard.add(row2);
-        keyboard.add(row3);
+    public ReplyKeyboardMarkup getMainMenuKeyboard(User user) {
+        if (user == null || !user.getIsAdmin()) {
+            return createSimpleKeyboard();
+        }
+        return createAdminKeyboard();
+    }
 
-        final ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        replyKeyboardMarkup.setKeyboard(keyboard);
+    private ReplyKeyboardMarkup createAdminKeyboard() {
+        ReplyKeyboardMarkup replyKeyboardMarkup = ReplyKeyboardMarkup.builder()
+                .keyboardRow(new KeyboardRow(
+                        KeyboardButton.builder().text(ButtonNameEnum.FIND_RANDOM_RECIPE_BUTTON.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.ADD_RECIPE_BUTTON.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.USERS_BUTTON.getButtonName()).build()))
+                .keyboardRow(new KeyboardRow(
+                        KeyboardButton.builder().text(ButtonNameEnum.BREAKFAST_BUTTON.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.LUNCH_BUTTON.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.DINNER_BUTTON.getButtonName()).build()))
+                .keyboardRow(new KeyboardRow(
+                        KeyboardButton.builder().text(ButtonNameEnum.HELP_BUTTON.getButtonName()).build())).build();
+
         replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setResizeKeyboard(true);
         replyKeyboardMarkup.setOneTimeKeyboard(false);

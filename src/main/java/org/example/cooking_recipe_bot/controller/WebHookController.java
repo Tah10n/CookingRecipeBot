@@ -3,7 +3,7 @@ package org.example.cooking_recipe_bot.controller;
 import lombok.AllArgsConstructor;
 import org.example.cooking_recipe_bot.bot.CookBookTelegramBot;
 import org.springframework.web.bind.annotation.*;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 @AllArgsConstructor
@@ -14,6 +14,6 @@ public class WebHookController {
 
     @PostMapping("/")
     public BotApiMethod<?> onUpdateReceived(@RequestBody Update update) {
-        return bot.onWebhookUpdateReceived(update);
+        return bot.consumeUpdate(update);
     }
 }

@@ -1,7 +1,7 @@
 package org.example.cooking_recipe_bot.constants;
 
 public enum BotMessageEnum {
-    HELP_MESSAGE("\uD83D\uDC4B Привет, я бот для поиска рецептов\n\n" +
+    HELP_MESSAGE("\uD83D\uDC4B я бот для поиска рецептов\n\n" +
             "❗ *Что Вы можете сделать:*\n" +
             "✅ Найти рецепты из базы по ключевому слову или по ингредиенту. Для этого отправьте сообщение боту\n" +
             "✅ Найти случайный рецепт\n" +
