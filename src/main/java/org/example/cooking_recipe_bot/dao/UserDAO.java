@@ -28,12 +28,16 @@ public class UserDAO {
         usersRepository.save(user);
     }
 
-    public void deleteUser(User user) {
-        usersRepository.delete(user);
+    public void deleteUser(long userId) {
+        usersRepository.deleteById(userId);
     }
 
     public User getUserByUserName(String userName) {
         return usersRepository.findByUserName(userName);
+    }
+
+    public User getUserById(long userId) {
+        return usersRepository.findById(userId).orElse(null);
     }
 
     public boolean isFirstAdmin(User user) {
@@ -49,5 +53,17 @@ public class UserDAO {
 
     public List<User> findAllUsers() {
         return usersRepository.findAll();
+    }
+
+    public void setAdmin(long userId) {
+        User user = usersRepository.findById(userId).get();
+        user.setIsAdmin(true);
+        usersRepository.save(user);
+    }
+
+    public void unsetAdmin(long userId) {
+        User user = usersRepository.findById(userId).get();
+        user.setIsAdmin(false);
+        usersRepository.save(user);
     }
 }

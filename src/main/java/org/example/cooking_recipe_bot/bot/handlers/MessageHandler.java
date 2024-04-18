@@ -1,7 +1,6 @@
 package org.example.cooking_recipe_bot.bot.handlers;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.cooking_recipe_bot.bot.CookBookTelegramBot;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.constants.BotMessageEnum;
@@ -13,6 +12,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.util.List;
 
@@ -23,18 +23,18 @@ public class MessageHandler implements UpdateHandler {
     ReplyKeyboardMaker replyKeyboardMaker;
     InlineKeyboardMaker inlineKeyboardMaker;
     UserDAO userDAO;
+    TelegramClient telegramClient;
 
 
-
-    public MessageHandler(ReplyKeyboardMaker replyKeyboardMaker, InlineKeyboardMaker inlineKeyboardMaker, UserDAO userDAO) {
+    public MessageHandler(ReplyKeyboardMaker replyKeyboardMaker, InlineKeyboardMaker inlineKeyboardMaker, UserDAO userDAO, TelegramClient telegramClient) {
         this.replyKeyboardMaker = replyKeyboardMaker;
         this.inlineKeyboardMaker = inlineKeyboardMaker;
         this.userDAO = userDAO;
-
+        this.telegramClient = telegramClient;
     }
 
     @Override
-    public SendMessage handle(Update update) {
+    public SendMessage handle(Update update) throws TelegramApiException {
 
         User user = getUserFromUpdate(update);
 
@@ -73,8 +73,8 @@ public class MessageHandler implements UpdateHandler {
             sendMessage.setText("Ужин");
         } else if (inputText.equals(ButtonNameEnum.USERS_BUTTON.getButtonName().toLowerCase())) {
             //TODO find all users
-           sendMessges(sendMessage);
-
+            sendUsersList(update);
+            return null;
 
         } else {
             //TODO find on inputText
@@ -85,20 +85,19 @@ public class MessageHandler implements UpdateHandler {
         return sendMessage;
     }
 
-    private void sendMessges(SendMessage sendMessage) {
+    private void sendUsersList(Update update) throws TelegramApiException {
         List<User> allUsers = userDAO.findAllUsers();
 
-//        for (User user1 : allUsers) {
-//
-//            sendMessage.setText(user1.toString());
-//            sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserKeyboard());
-//            try {
-//                cookBookTelegramBot.execute(sendMessage);
-//            } catch (TelegramApiException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//        }
+        for (User user1 : allUsers) {
+            if(user1.getUserName().equals(update.getMessage().getFrom().getUserName())) continue;
+            SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(user1.toString()).build();
+            if(user1.getIsAdmin()){
+                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserAdminKeyboard());
+            } else {
+                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserKeyboard());
+            }
+            telegramClient.execute(sendMessage);
+        }
 
     }
 

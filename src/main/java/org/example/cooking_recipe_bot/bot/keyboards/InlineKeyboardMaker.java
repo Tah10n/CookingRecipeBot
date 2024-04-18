@@ -20,4 +20,14 @@ public class InlineKeyboardMaker {
         return inlineKeyboardMarkup;
     }
 
+    public InlineKeyboardMarkup getUserAdminKeyboard() {
+        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(
+                        InlineKeyboardButton.builder().text("Удалить пользователя").callbackData("/delete_user").build(),
+                        InlineKeyboardButton.builder().text("Убрать из админов").callbackData("/unset_admin").build()
+                )).build();
+
+        return inlineKeyboardMarkup;
+    }
+
 }

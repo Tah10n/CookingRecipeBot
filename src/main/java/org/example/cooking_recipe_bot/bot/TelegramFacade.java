@@ -4,9 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.handlers.CallbackQueryHandler;
 import org.example.cooking_recipe_bot.bot.handlers.MessageHandler;
 import org.example.cooking_recipe_bot.bot.handlers.UpdateHandler;
+import org.example.cooking_recipe_bot.constants.BotMessageEnum;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Slf4j
 @Component
@@ -28,7 +31,14 @@ public class TelegramFacade {
         } else {
             updateHandler = messageHandler;
         }
-        return updateHandler.handle(update);
+        try {
+            return updateHandler.handle(update);
+        } catch (TelegramApiException e) {
+
+            log.error(e.getMessage());
+
+            return SendMessage.builder().text(BotMessageEnum.EXCEPTION_WHAT_THE_FUCK.getMessage()).chatId(update.getMessage().getChatId()).build();
+        }
 
     }
 }

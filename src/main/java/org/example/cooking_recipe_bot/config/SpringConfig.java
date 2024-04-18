@@ -5,7 +5,9 @@ import org.example.cooking_recipe_bot.bot.CookBookTelegramBot;
 import org.example.cooking_recipe_bot.bot.TelegramFacade;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook;
+import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.io.IOException;
 import java.net.URI;
@@ -34,5 +36,9 @@ public class SpringConfig {
         return bot;
     }
 
+    @Bean
+    public TelegramClient getTelegramClient(BotConfig botConfig) {
+        return new OkHttpTelegramClient(botConfig.getBotToken());
+    }
 
 }

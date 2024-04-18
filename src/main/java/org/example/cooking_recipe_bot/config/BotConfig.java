@@ -22,6 +22,8 @@ public class BotConfig {
     @Value("${telegrambot.botToken}")
     private String botToken;
 
+
+
     public HttpResponse setWebhook() {
         var telegramUrl = "https://api.telegram.org/bot" + getBotToken();
         var url = telegramUrl + "/setWebhook?url=" + getBotPath();
