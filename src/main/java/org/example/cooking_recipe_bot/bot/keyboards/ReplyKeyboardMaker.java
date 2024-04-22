@@ -1,14 +1,11 @@
 package org.example.cooking_recipe_bot.bot.keyboards;
 
-import org.example.cooking_recipe_bot.constants.ButtonNameEnum;
-import org.example.cooking_recipe_bot.entity.User;
+import org.example.cooking_recipe_bot.utils.constants.ButtonNameEnum;
+import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Component
 public class ReplyKeyboardMaker {

@@ -1,4 +1,4 @@
-package org.example.cooking_recipe_bot.constants;
+package org.example.cooking_recipe_bot.utils.constants;
 
 public enum BotMessageEnum {
     HELP_MESSAGE("\uD83D\uDC4B я бот для поиска рецептов\n\n" +
@@ -10,7 +10,15 @@ public enum BotMessageEnum {
             "Удачи!\n\n" +
             "Воспользуйтесь клавиатурой, чтобы начать работу или напишите что вы хотите найти\uD83D\uDC47"),
     EXCEPTION_ILLEGAL_MESSAGE("Нет, к такому меня не готовили! Я работаю или с текстом, или с файлом"),
-    EXCEPTION_WHAT_THE_FUCK("Что-то пошло не так. Обратитесь к программисту");
+    EXCEPTION_WHAT_THE_FUCK("Что-то пошло не так. Обратитесь к программисту"),
+    INSERT_RECIPE_MESSAGE("Отправьте рецепт в формате:\n" +
+            "Название\n" +
+            "• ингредиент\n" +
+            "• ингредиент\n" +
+            "• ингредиент\n" +
+            "Инструкция по приготовлению\n" +
+            "#хэштег #хэштег #хэштег"),
+    RECIPE_NOT_FOUND("Рецепт не найден");
 
     private final String message;
 

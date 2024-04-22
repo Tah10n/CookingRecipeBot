@@ -1,6 +1,6 @@
-package org.example.cooking_recipe_bot.repository;
+package org.example.cooking_recipe_bot.db.repository;
 
-import org.example.cooking_recipe_bot.entity.User;
+import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

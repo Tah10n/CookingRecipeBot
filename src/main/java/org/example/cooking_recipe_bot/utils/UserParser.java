@@ -1,6 +1,6 @@
 package org.example.cooking_recipe_bot.utils;
 
-import org.example.cooking_recipe_bot.entity.User;
+import org.example.cooking_recipe_bot.db.entity.User;
 
 import java.util.HashMap;
 import java.util.Map;

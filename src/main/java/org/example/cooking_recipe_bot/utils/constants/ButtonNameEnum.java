@@ -1,4 +1,4 @@
-package org.example.cooking_recipe_bot.constants;
+package org.example.cooking_recipe_bot.utils.constants;
 
 public enum ButtonNameEnum {
     HELP_BUTTON("Помощь"),

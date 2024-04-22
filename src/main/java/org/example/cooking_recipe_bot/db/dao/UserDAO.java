@@ -1,7 +1,7 @@
-package org.example.cooking_recipe_bot.dao;
+package org.example.cooking_recipe_bot.db.dao;
 
-import org.example.cooking_recipe_bot.entity.User;
-import org.example.cooking_recipe_bot.repository.UsersRepository;
+import org.example.cooking_recipe_bot.db.entity.User;
+import org.example.cooking_recipe_bot.db.repository.UsersRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -10,19 +10,15 @@ import java.util.Optional;
 
 @Service
 public class UserDAO {
-    @Value("${telegrambot.botowner}")
-    private String botOwner;
+   private String botOwner;
 
     private UsersRepository usersRepository;
 
-    public UserDAO(UsersRepository usersRepository) {
+    public UserDAO(UsersRepository usersRepository, @Value("${telegrambot.botowner}") String botOwner) {
         this.usersRepository = usersRepository;
-        System.out.println(botOwner);
+        this.botOwner = botOwner;
     }
 
-    public List<User> getAllUsers() {
-        return (List<User>) usersRepository.findAll();
-    }
 
     public void saveUser(User user) {
         usersRepository.save(user);
