@@ -62,4 +62,5 @@ public class UserDAO {
         user.setIsAdmin(false);
         usersRepository.save(user);
     }
+
 }

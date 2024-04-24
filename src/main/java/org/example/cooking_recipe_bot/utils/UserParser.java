@@ -10,26 +10,26 @@ public class UserParser {
         userString = userString.replace("User(", "").replace(")", "");
         String[] attributes = userString.split(", ");
 
-        Map<String, Object> userMap = new HashMap<>();
+        Map<String, Object> attributeMap = new HashMap<>();
         for (String attribute : attributes) {
             String[] parts = attribute.split("=");
             String key = parts[0];
             String value = parts[1];
 
             if ("null".equals(value)) {
-                userMap.put(key, null);
+                attributeMap.put(key, null);
             } else if ("true".equals(value) || "false".equals(value)) {
-                userMap.put(key, Boolean.parseBoolean(value));
+                attributeMap.put(key, Boolean.parseBoolean(value));
             } else {
-                userMap.put(key, value);
+                attributeMap.put(key, value);
             }
         }
         User user = new User();
-        user.setId(Long.parseLong((String) userMap.get("id")));
-        user.setUserName((String) userMap.get("userName"));
-        user.setFirstName((String) userMap.get("firstName"));
-        user.setLastName((String) userMap.get("lastName"));
-        user.setIsAdmin((Boolean) userMap.get("isAdmin"));
+        user.setId(Long.parseLong((String) attributeMap.get("id")));
+        user.setUserName((String) attributeMap.get("userName"));
+        user.setFirstName((String) attributeMap.get("firstName"));
+        user.setLastName((String) attributeMap.get("lastName"));
+        user.setIsAdmin((Boolean) attributeMap.get("isAdmin"));
         return user;
     }
 }

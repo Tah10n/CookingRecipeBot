@@ -2,11 +2,12 @@ package org.example.cooking_recipe_bot.utils;
 
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 
+import java.text.ParseException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RecipeParser {
-    public static Recipe parseRecipeFromString(String recipeString) {
+    public static Recipe parseRecipeFromString(String recipeString) throws ParseException {
         Recipe recipe = new Recipe();
 
         // Extract the recipe name
