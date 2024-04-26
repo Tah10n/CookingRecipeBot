@@ -10,4 +10,10 @@ import java.util.List;
 public interface RecipesRepository extends MongoRepository<Recipe, String> {
     List<Recipe> findByNameLikeIgnoreCase(String name);
     List<Recipe> findRecipesByHashtagsContainsOrderByName(String hashtag);
+
+    Recipe findRecipesByNameEqualsIgnoreCase(String name);
+
+    void deleteRecipeById(String id);
+
+    Recipe findRecipeById(String recipeId);
 }

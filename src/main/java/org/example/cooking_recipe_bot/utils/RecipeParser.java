@@ -8,19 +8,31 @@ import java.util.regex.Pattern;
 
 public class RecipeParser {
     public static Recipe parseRecipeFromString(String recipeString) throws ParseException {
-        Recipe recipe = new Recipe();
+        if(recipeString == null) {
+            throw new ParseException("Recipe string is null", 0);
+        }
 
         // Extract the recipe name
-        String name = recipeString.split("\n")[0].trim();
+        String[] lines = recipeString.split("\n");
+        if (lines.length == 0) {
+            throw new ParseException("Recipe string is empty", 0);
+        }
+        Recipe recipe = new Recipe();
+        String name = lines[0].trim().toLowerCase();
         recipe.setName(name);
 
         // Extract the ingredients
         Pattern ingredientPattern = Pattern.compile("• (.+)");
-        Matcher ingredientMatcher = ingredientPattern.matcher(recipeString);
         StringBuilder ingredientsBuilder = new StringBuilder();
-        while (ingredientMatcher.find()) {
-            String ingredient = ingredientMatcher.group(1).trim();
-            ingredientsBuilder.append(ingredient).append("\n");
+        for (String line : lines) {
+            Matcher ingredientMatcher = ingredientPattern.matcher(line);
+            if (ingredientMatcher.find()) {
+                String ingredient = ingredientMatcher.group(1).trim();
+                ingredientsBuilder.append(ingredient).append("\n");
+            }
+        }
+        if(ingredientsBuilder.length() == 0) {
+            throw new ParseException("Recipe string has no ingredients", recipeString.lastIndexOf(name));
         }
         recipe.setIngredients(ingredientsBuilder.toString().trim());
 
@@ -32,6 +44,9 @@ public class RecipeParser {
             String instruction = instructionMatcher.group(1).trim();
             instructionsBuilder.append(instruction).append("\n");
         }
+        if(instructionsBuilder.length() == 0) {
+            throw new ParseException("Recipe string has no instructions", recipeString.lastIndexOf(name));
+        }
         recipe.setInstructions(instructionsBuilder.toString().trim());
 
         // Extract the hashtags
@@ -42,9 +57,11 @@ public class RecipeParser {
             String hashtag = hashtagsMatcher.group(1).trim();
             hashtagsBuilder.append(hashtag).append("\n");
         }
+        if(hashtagsBuilder.length() == 0) {
+            throw new ParseException("Recipe string has no hashtags", recipeString.lastIndexOf(name));
+        }
         recipe.setHashtags(hashtagsBuilder.toString().trim());
 
         return recipe;
-
     }
 }

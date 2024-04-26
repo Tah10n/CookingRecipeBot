@@ -53,6 +53,7 @@ public class MessageHandler implements UpdateHandler {
 
     @Override
     public SendMessage handle(Update update) {
+        Message message = update.getMessage();
 
         User user = getUserFromUpdate(update);
         BotStateContext botStateContext = botStateContextDAO.findBotStateContextByUserName(user.getUserName());
@@ -62,7 +63,7 @@ public class MessageHandler implements UpdateHandler {
             botStateContext.setCurrentBotState(BotState.DEFAULT);
             botStateContextDAO.saveBotStateContext(botStateContext);
         }
-        Message message = update.getMessage();
+
         long chatId = message.getChatId();
 
 
@@ -88,40 +89,35 @@ public class MessageHandler implements UpdateHandler {
                         sendRecipesList(update, recipesByHashtagsContains);
                     } catch (TelegramApiException e) {
                         log.error(e.getMessage());
-                        throw new RuntimeException(e);
+                        e.printStackTrace();
                     }
                 } else if (botStateContext.getCurrentBotState().equals(BotState.ADDING_RECIPE)) {
+                    sendMessage = addNewRecipe(update, sendMessage, botStateContext);
 
-                    Recipe recipe = null;
-                    try {
-                        recipe = RecipeParser.parseRecipeFromString(inputText);
-                    } catch (ParseException e) {
-                        sendMessage.setText("Не удалось распарсить рецепт");
-                        log.error(e.getMessage());
-                        throw new RuntimeException(e);
-                    }
-                    if (checkIsRecipeAlreadyExists(recipe)) {
-                        sendMessage.setText("Такой рецепт уже есть в базе");
-                    } else {
-                        Recipe savedRecipe = recipeDAO.saveRecipe(recipe);
-                        sendMessage.setText("Рецепт добавлен: \n" + savedRecipe.toString());
-                    }
                 } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_EDITED_RECIPE)) {
 
                     Recipe recipe = null;
+                    String[] split = inputText.split("//");
+                    String recipeId = split[1];
+                    String recipeString = split[2];
                     try {
-                        recipe = RecipeParser.parseRecipeFromString(inputText);
-                        Recipe recipeByName = recipeDAO.findRecipeByName(recipe.getName()).get(0);
-                        recipeByName.setDescription(recipe.getDescription());
-                        recipeByName.setIngredients(recipe.getIngredients());
-                        recipeByName.setInstructions(recipe.getInstructions());
-                        recipeByName.setHashtags(recipe.getHashtags());
-                        recipeDAO.saveRecipe(recipeByName);
-                        sendMessage.setText("Рецепт изменен: \n" + recipeByName.toString());
+                        recipe = RecipeParser.parseRecipeFromString(recipeString);
+                        Recipe recipeToEdit = recipeDAO.findRecipeById(recipeId);
+                        recipeToEdit.setName(recipe.getName());
+                        recipeToEdit.setIngredients(recipe.getIngredients());
+                        recipeToEdit.setInstructions(recipe.getInstructions());
+                        recipeToEdit.setHashtags(recipe.getHashtags());
+                        recipeDAO.updateRecipe(recipeToEdit);
+                        sendMessage.setText("Рецепт изменен");
+                        sendRecipesList(update, List.of(recipeToEdit));
                     } catch (ParseException e) {
                         sendMessage.setText("Не удалось распарсить рецепт");
+                        e.printStackTrace();
                         log.error(e.getMessage());
-                        throw new RuntimeException(e);
+
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                        log.error(e.getMessage());
                     }
 
                     botStateContext.setCurrentBotState(BotState.DEFAULT);
@@ -134,40 +130,55 @@ public class MessageHandler implements UpdateHandler {
             if (botStateContext.getCurrentBotState().equals(BotState.DEFAULT)) {
                 sendMessage.setText("Отправьте ключевое слово или ингредиент для поиска рецептов");
             } else if (botStateContext.getCurrentBotState().equals(BotState.ADDING_RECIPE)) {
-                List<PhotoSize> photos = update.getMessage().getPhoto();
-
-                String f_id = photos.stream().max(Comparator.comparing(PhotoSize::getFileSize))
-                        .map(PhotoSize::getFileId)
-                        .orElse("");
-
-                Recipe recipe = null;
-                try {
-                    recipe = RecipeParser.parseRecipeFromString(update.getMessage().getCaption());
-                } catch (ParseException e) {
-                    sendMessage.setText("Не удалось распарсить рецепт");
-                    log.error(e.getMessage());
-                    throw new RuntimeException(e);
-                }
-                recipe.setPhoto(f_id);
-
-                if (checkIsRecipeAlreadyExists(recipe)) {
-                    sendMessage.setText("Такой рецепт уже есть в базе");
-
-                } else {
-                    Recipe savedRecipe = recipeDAO.saveRecipe(recipe);
-                    sendMessage.setText("Рецепт добавлен");
-                    SendPhoto sendPhoto = SendPhoto.builder().chatId(chatId).photo(new InputFile(f_id)).caption(savedRecipe.toString()).build();
-                    try {
-                        telegramClient.execute(sendPhoto);
-                    } catch (TelegramApiException e) {
-                        log.error(e.getMessage());
-                        throw new RuntimeException(e);
-                    }
-                }
+                sendMessage = addNewRecipe(update, sendMessage, botStateContext);
             }
 
         }
 
+        return sendMessage;
+    }
+
+    private SendMessage addNewRecipe(Update update, SendMessage sendMessage, BotStateContext botStateContext) {
+        if (!update.getMessage().hasText() && !update.getMessage().hasPhoto()) {
+            botStateContext.setCurrentBotState(BotState.DEFAULT);
+            botStateContextDAO.saveBotStateContext(botStateContext);
+            return sendMessage;
+        }
+
+        Recipe recipe;
+        try {
+            String inputText = update.getMessage().hasText() ? update.getMessage().getText() : update.getMessage().getCaption();
+            recipe = RecipeParser.parseRecipeFromString(inputText);
+        } catch (ParseException e) {
+            log.error(e.getMessage());
+            e.printStackTrace();
+            sendMessage.setText(BotMessageEnum.RECIPE_PARSING_ERROR.getMessage());
+            return sendMessage;
+        }
+
+        if (checkIsRecipeAlreadyExists(recipe)) {
+            sendMessage.setText(BotMessageEnum.RECIPE_ALREADY_EXISTS.getMessage());
+        } else {
+            String f_id = update.getMessage().hasPhoto() ? update.getMessage().getPhoto().stream()
+                    .max(Comparator.comparing(PhotoSize::getFileSize))
+                    .map(PhotoSize::getFileId)
+                    .orElse("") : null;
+            recipe.setPhotoId(f_id);
+
+            Recipe savedRecipe = recipeDAO.saveRecipe(recipe);
+
+            try {
+                sendRecipesList(update, List.of(savedRecipe));
+                sendMessage.setText(BotMessageEnum.RECIPE_ADDED.getMessage());
+            } catch (TelegramApiException e) {
+                log.error(e.getMessage());
+                e.printStackTrace();
+                sendMessage.setText(BotMessageEnum.RECIPE_SENDING_ERROR.getMessage());
+            }
+        }
+
+        botStateContext.setCurrentBotState(BotState.DEFAULT);
+        botStateContextDAO.saveBotStateContext(botStateContext);
         return sendMessage;
     }
 
@@ -249,7 +260,7 @@ public class MessageHandler implements UpdateHandler {
 
     private boolean checkIsRecipeAlreadyExists(Recipe recipe) {
         String recipeName = recipe.getName();
-        if (recipeDAO.findRecipeByName(recipeName) != null && recipeDAO.findRecipeByName(recipeName).size() > 0) {
+        if (recipeDAO.findRecipeByNameEqualsIgnoreCase(recipeName) != null) {
             return true;
         }
         return false;
@@ -257,18 +268,23 @@ public class MessageHandler implements UpdateHandler {
 
     private void sendRecipesList(Update update, List<Recipe> recipeList) throws TelegramApiException {
         Long userId = update.getMessage().getFrom().getId();
+        if(recipeList.isEmpty()) {
+            SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(BotMessageEnum.RECIPE_NOT_FOUND.getMessage()).build();
+            telegramClient.execute(sendMessage);
+            return;
+        }
         for (Recipe recipe : recipeList) {
-            if (recipe.getPhoto() == null) {
+            if (recipe.getPhotoId() == null) {
                 SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(recipe.toString()).build();
-                if (userDAO.findById(userId).get().getIsAdmin()==true) {
-                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe.toString()));
+                if (userDAO.findById(userId).get().getIsAdmin() == true) {
+                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe));
                 }
                 telegramClient.execute(sendMessage);
             } else {
                 SendPhoto sendPhoto = SendPhoto.builder().chatId(update.getMessage().getChatId())
-                        .caption(recipe.toString()).photo(new InputFile(recipe.getPhoto())).build();
-                if (userDAO.findById(userId).get().getIsAdmin()==true) {
-                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe.toString()));
+                        .caption(recipe.toString()).photo(new InputFile(recipe.getPhotoId())).build();
+                if (userDAO.findById(userId).get().getIsAdmin() == true) {
+                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe));
                 }
                 telegramClient.execute(sendPhoto);
             }
@@ -284,9 +300,9 @@ public class MessageHandler implements UpdateHandler {
                 continue;
             SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(user1.toString()).build();
             if (user1.getIsAdmin()) {
-                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserAdminKeyboard());
+                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserAdminKeyboard(user1.getId()));
             } else {
-                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserKeyboard());
+                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserKeyboard(user1.getId()));
             }
             telegramClient.execute(sendMessage);
         }

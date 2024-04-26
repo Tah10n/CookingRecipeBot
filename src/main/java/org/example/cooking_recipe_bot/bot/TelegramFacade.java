@@ -2,6 +2,7 @@ package org.example.cooking_recipe_bot.bot;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.handlers.CallbackQueryHandler;
+import org.example.cooking_recipe_bot.bot.handlers.InlineQueryHandler;
 import org.example.cooking_recipe_bot.bot.handlers.MessageHandler;
 import org.example.cooking_recipe_bot.bot.handlers.UpdateHandler;
 import org.example.cooking_recipe_bot.utils.constants.BotMessageEnum;
@@ -17,21 +18,27 @@ public class TelegramFacade {
     final MessageHandler messageHandler;
     final CallbackQueryHandler callbackQueryHandler;
     UpdateHandler updateHandler;
+    InlineQueryHandler inlineQueryHandler;
 
 
-    public TelegramFacade(MessageHandler messageHandler, CallbackQueryHandler callbackQueryHandler) {
+    public TelegramFacade(MessageHandler messageHandler, CallbackQueryHandler callbackQueryHandler, InlineQueryHandler inlineQueryHandler) {
         this.messageHandler = messageHandler;
         this.callbackQueryHandler = callbackQueryHandler;
-
+        this.inlineQueryHandler = inlineQueryHandler;
     }
 
 
     public BotApiMethod<?> handleUpdate(Update update) {
-        if (update.hasCallbackQuery()) {
+        Long chatId = 0l;
+        if (update.hasInlineQuery()) {
+            updateHandler = inlineQueryHandler;
+            chatId = update.getInlineQuery().getFrom().getId();
+        } else if (update.hasCallbackQuery()) {
             updateHandler = callbackQueryHandler;
-
-        } else {
+            chatId = update.getCallbackQuery().getMessage().getChatId();
+        } else if (update.hasMessage()) {
             updateHandler = messageHandler;
+            chatId = update.getMessage().getChatId();
         }
         try {
             return updateHandler.handle(update);
@@ -39,7 +46,7 @@ public class TelegramFacade {
 
             log.error(e.getMessage());
 
-            return SendMessage.builder().text(BotMessageEnum.EXCEPTION_WHAT_THE_FUCK.getMessage()).chatId(update.getMessage().getChatId()).build();
+            return SendMessage.builder().text(BotMessageEnum.EXCEPTION_WHAT_THE_FUCK.getMessage()).chatId(chatId).build();
         }
 
     }

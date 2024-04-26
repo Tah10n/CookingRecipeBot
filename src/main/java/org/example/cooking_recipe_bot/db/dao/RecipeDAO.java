@@ -14,11 +14,13 @@ public class RecipeDAO {
         this.recipesRepository = recipesRepository;
     }
 
-    public List<Recipe> findRecipeByName(String name) {
+    public List<Recipe> findRecipeByNameLikeIgnoreCase(String name) {
         return recipesRepository.findByNameLikeIgnoreCase(name);
     }
 
-
+    public Recipe findRecipeByNameEqualsIgnoreCase(String name) {
+        return recipesRepository.findRecipesByNameEqualsIgnoreCase(name);
+    }
 
     public Recipe saveRecipe(Recipe recipe) {
         return recipesRepository.save(recipe);
@@ -27,12 +29,13 @@ public class RecipeDAO {
 
     public Recipe getRandomRecipe() {
         List<Recipe> recipes = recipesRepository.findAll();
+        if(recipes.isEmpty()) return null;
         int index = (int) (Math.random() * recipes.size());
         return recipes.get(index);
     }
 
-    public void deleteRecipe(Recipe recipe) {
-        recipesRepository.delete(recipe);
+    public void deleteRecipe(String recipeId) {
+        recipesRepository.deleteRecipeById(recipeId);
     }
 
     public List<Recipe> findAllRecipes() {
@@ -51,5 +54,9 @@ public class RecipeDAO {
     public List<Recipe> findRecipesByHashtagsContains(String hashtag) {
         return recipesRepository.findRecipesByHashtagsContainsOrderByName(hashtag);
 
+    }
+
+    public Recipe findRecipeById(String recipeId) {
+        return recipesRepository.findRecipeById(recipeId);
     }
 }

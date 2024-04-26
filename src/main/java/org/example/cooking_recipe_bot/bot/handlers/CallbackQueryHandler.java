@@ -14,6 +14,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -41,13 +42,13 @@ public class CallbackQueryHandler implements UpdateHandler {
 
         final CallbackQuery callbackQuery = update.getCallbackQuery();
 
-        String data = callbackQuery.getData();
+        String data = callbackQuery.getData().substring(0, callbackQuery.getData().indexOf(":"));
         long chatId = callbackQuery.getMessage().getChatId();
-        User user = userDAO.getUserByUserName(callbackQuery.getFrom().getUserName());
         int messageId = callbackQuery.getMessage().getMessageId();
         SendMessage sendMessage;
         switch (data) {
             case ("delete_user_button"):
+                //todo get userId from button
                 long userId = getUserIdFromMessage((Message) callbackQuery.getMessage());
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userId).getUserName() + " удален").build();
                 DeleteMessage deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
@@ -60,7 +61,7 @@ public class CallbackQueryHandler implements UpdateHandler {
                 userDAO.setAdmin(userId);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userId).getUserName() + " стал администратором").build();
                 telegramClient.execute(sendMessage);
-                EditMessageText editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userId).toString()).replyMarkup(inlineKeyboardMaker.getUserAdminKeyboard()).build();
+                EditMessageText editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userId).toString()).replyMarkup(inlineKeyboardMaker.getUserAdminKeyboard(userId)).build();
                 telegramClient.execute(editMessageText);
                 break;
             case ("unset_admin_button"):
@@ -68,18 +69,19 @@ public class CallbackQueryHandler implements UpdateHandler {
                 userDAO.unsetAdmin(userId);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userId).getUserName() + " больше не администратор").build();
                 telegramClient.execute(sendMessage);
-                editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userId).toString()).replyMarkup(inlineKeyboardMaker.getUserKeyboard()).build();
+                editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userId).toString()).replyMarkup(inlineKeyboardMaker.getUserKeyboard(userId)).build();
                 telegramClient.execute(editMessageText);
                 break;
             case ("delete_recipe_button"):
-
-                break;
-            case ("edit_recipe_button"):
-                sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте отредактированный рецепт").build();
+                String recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
+                recipeDAO.deleteRecipe(recipeId);
+                sendMessage = SendMessage.builder().chatId(chatId).text("Рецепт удален").build();
                 telegramClient.execute(sendMessage);
-                BotStateContext botStateContext = botStateContextDAO.findBotStateContextByUserName(user.getUserName());
-                botStateContext.setCurrentBotState(BotState.WAITING_FOR_EDITED_RECIPE);
-                botStateContextDAO.saveBotStateContext(botStateContext);
+                DeleteMessage deleteMessage1 = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
+                telegramClient.execute(deleteMessage1);
+                break;
+            case ("change_photo_button"):
+                //todo
                 break;
 
         }
