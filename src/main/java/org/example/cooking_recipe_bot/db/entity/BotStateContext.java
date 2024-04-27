@@ -11,6 +11,7 @@ public class BotStateContext {
     @Id
     private String userName;
     private BotState currentBotState;
+    private String additionalData;
 
 
 }

@@ -1,5 +1,6 @@
 package org.example.cooking_recipe_bot.db.dao;
 
+import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.repository.BotStateContextRepository;
 import org.springframework.stereotype.Service;
@@ -28,4 +29,18 @@ public class BotStateContextDAO {
         botStateContextRepository.save(botStateContext);
     }
 
+
+    public void changeBotState(String userName, BotState botState, String additionalData) {
+        BotStateContext botStateContext = findBotStateContextByUserName(userName);
+        botStateContext.setAdditionalData(additionalData);
+        botStateContext.setCurrentBotState(botState);
+        saveBotStateContext(botStateContext);
+    }
+
+
+    public void changeBotState(String userName, BotState botState) {
+        BotStateContext botStateContext = findBotStateContextByUserName(userName);
+        botStateContext.setCurrentBotState(botState);
+        saveBotStateContext(botStateContext);
+    }
 }

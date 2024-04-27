@@ -30,6 +30,8 @@ public class InlineKeyboardMaker {
     }
 
     public InlineKeyboardMarkup getRecipeAdminKeyboard(Recipe recipe) {
+        InlineKeyboardButton openButton = InlineKeyboardButton.builder().text(recipe.getName().toUpperCase()).callbackData("open_recipe_button:" + recipe.getId()).build();
+
         InlineKeyboardButton deleteButton = InlineKeyboardButton.builder().text("Удалить рецепт").callbackData("delete_recipe_button:" + recipe.getId()).build();
         InlineKeyboardButton changePhotoButton = InlineKeyboardButton.builder().text("Изменить фото").callbackData("change_photo_button:" + recipe.getId()).build();
         InlineKeyboardButton editButton = InlineKeyboardButton.builder().text("Редактировать")
@@ -37,7 +39,17 @@ public class InlineKeyboardMaker {
                 .build();
 
         InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
-                .keyboardRow(new InlineKeyboardRow(editButton, deleteButton)).build();
+                .keyboardRow(new InlineKeyboardRow(openButton))
+                .keyboardRow(new InlineKeyboardRow(editButton, changePhotoButton, deleteButton)).build();
+
+        return inlineKeyboardMarkup;
+    }
+
+    public InlineKeyboardMarkup getRecipeKeyboard(Recipe recipe) {
+        InlineKeyboardButton openButton = InlineKeyboardButton.builder().text(recipe.getName().toUpperCase()).callbackData("open_recipe_button:" + recipe.getId()).build();
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(openButton)).build();
 
         return inlineKeyboardMarkup;
     }

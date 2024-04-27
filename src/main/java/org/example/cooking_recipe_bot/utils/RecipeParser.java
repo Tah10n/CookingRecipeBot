@@ -22,7 +22,7 @@ public class RecipeParser {
         recipe.setName(name);
 
         // Extract the ingredients
-        Pattern ingredientPattern = Pattern.compile("• (.+)");
+        Pattern ingredientPattern = Pattern.compile("•(.+)");
         StringBuilder ingredientsBuilder = new StringBuilder();
         for (String line : lines) {
             Matcher ingredientMatcher = ingredientPattern.matcher(line);
