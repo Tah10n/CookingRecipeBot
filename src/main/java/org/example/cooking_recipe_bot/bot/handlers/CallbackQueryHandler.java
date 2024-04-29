@@ -85,20 +85,50 @@ public class CallbackQueryHandler implements UpdateHandler {
                 telegramClient.execute(deleteMessage1);
                 break;
             case ("open_recipe_button"):
-                recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
+                int isOpened = Integer.parseInt(callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1, callbackQuery.getData().lastIndexOf(":")));
+                recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
                 Recipe recipe = recipeDAO.findRecipeById(recipeId);
                 Message message = (Message) callbackQuery.getMessage();
-                if(message.hasText()) {
-                    editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString()).build();
-                    if(userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
-                        editMessageText.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe));
+                if (message.hasText()) {
+                    EditMessageText editMessageTextFromOpenButton = null;
+                    if (isOpened == 0) {
+                        editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString()).build();
+
+                        if (userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
+                            editMessageTextFromOpenButton.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, 1));
+                        } else {
+                            editMessageTextFromOpenButton.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 1));
+                        }
+
+                    } else if (isOpened == 1) {
+                        editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text("Рецепт:").build();
+
+                        if (userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
+                            editMessageTextFromOpenButton.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, 0));
+                        } else {
+                            editMessageTextFromOpenButton.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0));
+                        }
                     }
-                    telegramClient.execute(editMessageText);
+
+                    telegramClient.execute(editMessageTextFromOpenButton);
                 } else if (message.hasPhoto()) {
-                    EditMessageCaption editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId).caption(recipe.toString()).build();
-                    if(userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
-                        editMessageCaption.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe));
+                    EditMessageCaption editMessageCaption = null;
+                    if(isOpened == 0) {
+                        editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId).caption(recipe.toString()).build();
+                        if (userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
+                            editMessageCaption.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe,1));
+                        } else {
+                            editMessageCaption.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe,1));
+                        }
+                    } else if (isOpened == 1) {
+                        editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId).caption("").build();
+                        if (userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
+                            editMessageCaption.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe,0));
+                        } else {
+                            editMessageCaption.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe,0));
+                        }
                     }
+
                     telegramClient.execute(editMessageCaption);
                 }
                 break;
@@ -111,6 +141,8 @@ public class CallbackQueryHandler implements UpdateHandler {
                 botStateContextDAO.changeBotState(userName, BotState.WAITING_FOR_PHOTO, recipeId);
 
                 break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + data);
         }
 
         return null;

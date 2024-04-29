@@ -57,24 +57,6 @@ public class InlineQueryHandler implements UpdateHandler {
             BotStateContext botStateContext = botStateContextDAO.findBotStateContextByUserName(inlineQuery.getFrom().getUserName());
             botStateContext.setCurrentBotState(BotState.WAITING_FOR_EDITED_RECIPE);
             botStateContextDAO.saveBotStateContext(botStateContext);
-//            String[] split = query.split("//");
-//            String recipeId = split[1];
-//            try {
-//                Recipe recipe = recipeDAO.findRecipeById(recipeId);
-//                recipeDAO.updateRecipe(recipe);
-//                AnswerInlineQuery answerInlineQuery = AnswerInlineQuery.builder().inlineQueryId(inlineQuery.getId())
-//                        .result(InlineQueryResultCachedPhoto.builder().id(recipe.getId()).photoFileId(recipe.getPhotoId()).title(recipe.getName()).build()).build();
-//                telegramClient.execute(answerInlineQuery);
-//            } catch (ParseException e) {
-//                e.printStackTrace();
-//                log.error(e.getMessage());
-//
-//                SendMessage sendMessage = SendMessage.builder().text(BotMessageEnum.RECIPE_PARSING_ERROR.getMessage()).chatId(chatId).build();
-//                return sendMessage;
-//            } catch (TelegramApiException e) {
-//                e.printStackTrace();
-//                log.error(e.getMessage());
-//            }
             return null;
         } else{
             try {
@@ -94,7 +76,7 @@ public class InlineQueryHandler implements UpdateHandler {
             //todo: add pagination, change search method
             recipeDAO.findRecipesByHashtagsContains(query).forEach(recipe -> {
                 InlineQueryResultCachedPhoto inlineQueryResult = InlineQueryResultCachedPhoto.builder().id(recipe.getId()).photoFileId(recipe.getPhotoId())
-                        .title(recipe.getName()).build();
+                        .title(recipe.getName()).caption(recipe.toString()).build();
                 inlineQueryResults.add(inlineQueryResult);
             });
             return inlineQueryResults;

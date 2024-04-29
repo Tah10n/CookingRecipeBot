@@ -303,9 +303,9 @@ public class MessageHandler implements UpdateHandler {
                 SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text("Рецепт:").build();
 
                 if (userDAO.findById(userId).get().getIsAdmin()) {
-                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe));
+                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe,0));
                 } else {
-                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe));
+                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe,0));
                 }
                 telegramClient.execute(sendMessage);
             } else {
@@ -313,9 +313,9 @@ public class MessageHandler implements UpdateHandler {
                         .caption("").photo(new InputFile(recipe.getPhotoId())).build();
 
                 if (userDAO.findById(userId).get().getIsAdmin()) {
-                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe));
+                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe,0));
                 } else {
-                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe));
+                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe,0));
                 }
                 telegramClient.execute(sendPhoto);
             }
