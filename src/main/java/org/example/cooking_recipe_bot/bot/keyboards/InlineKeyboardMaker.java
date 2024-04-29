@@ -34,13 +34,15 @@ public class InlineKeyboardMaker {
 
         InlineKeyboardButton deleteButton = InlineKeyboardButton.builder().text("Удалить рецепт").callbackData("delete_recipe_button:" + recipe.getId()).build();
         InlineKeyboardButton changePhotoButton = InlineKeyboardButton.builder().text("Изменить фото").callbackData("change_photo_button:" + recipe.getId()).build();
+        InlineKeyboardButton changeVideoButton = InlineKeyboardButton.builder().text("Изменить видео").callbackData("change_video_button:" + recipe.getId()).build();
         InlineKeyboardButton editButton = InlineKeyboardButton.builder().text("Редактировать")
                 .switchInlineQueryCurrentChat("/edit_recipe//" + recipe.getId() + "//" + recipe.toString())
                 .build();
 
         InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(openButton))
-                .keyboardRow(new InlineKeyboardRow(editButton, changePhotoButton, deleteButton)).build();
+                .keyboardRow(new InlineKeyboardRow(editButton, deleteButton))
+                .keyboardRow(new InlineKeyboardRow(changePhotoButton, changeVideoButton)).build();
 
         return inlineKeyboardMarkup;
     }

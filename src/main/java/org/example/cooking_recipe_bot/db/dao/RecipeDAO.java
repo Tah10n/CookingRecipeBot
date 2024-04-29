@@ -4,6 +4,7 @@ import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.repository.RecipesRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -15,7 +16,7 @@ public class RecipeDAO {
     }
 
     public List<Recipe> findRecipeByNameLikeIgnoreCase(String name) {
-        return recipesRepository.findByNameLikeIgnoreCase(name);
+        return recipesRepository.findRecipesByNameContainsIgnoreCase(name);
     }
 
     public Recipe findRecipeByNameEqualsIgnoreCase(String name) {
@@ -43,17 +44,22 @@ public class RecipeDAO {
     }
 
 
-    public List<Recipe> getRecipesByName(String name) {
-        return recipesRepository.findRecipesByHashtagsContainsOrderByName(name);
-    }
-
     public Recipe updateRecipe(Recipe recipe) {
         return recipesRepository.save(recipe);
     }
 
-    public List<Recipe> findRecipesByHashtagsContains(String hashtag) {
-        return recipesRepository.findRecipesByHashtagsContainsOrderByName(hashtag);
+    public List<Recipe> findRecipesByHashtags(String hashtag) {
+        return recipesRepository.findRecipesByHashtagsContainsIgnoreCase(hashtag);
 
+    }
+
+    public List<Recipe> findRecipesByString(String string) {
+        List<Recipe> recipes = new ArrayList<>();
+        string = string.toLowerCase();
+        recipesRepository.findRecipesByNameContainsIgnoreCase(string).forEach(recipes::add);
+        recipesRepository.findRecipesByHashtagsContainsIgnoreCase(string).forEach(recipes::add);
+        recipesRepository.findRecipesByIngredientsContainsIgnoreCase(string).forEach(recipes::add);
+        return recipes;
     }
 
     public Recipe findRecipeById(String recipeId) {

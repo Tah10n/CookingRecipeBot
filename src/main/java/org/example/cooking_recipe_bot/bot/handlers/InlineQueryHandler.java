@@ -15,17 +15,18 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResult;
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultDocument;
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedDocument;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedPhoto;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -72,12 +73,15 @@ public class InlineQueryHandler implements UpdateHandler {
         }
 
         private Collection<? extends InlineQueryResult> getInlineQueryResultList (String query){
-            List<InlineQueryResult> inlineQueryResults = new ArrayList<>();
-            //todo: add pagination, change search method
-            recipeDAO.findRecipesByHashtagsContains(query).forEach(recipe -> {
-                InlineQueryResultCachedPhoto inlineQueryResult = InlineQueryResultCachedPhoto.builder().id(recipe.getId()).photoFileId(recipe.getPhotoId())
-                        .title(recipe.getName()).caption(recipe.toString()).build();
-                inlineQueryResults.add(inlineQueryResult);
+            Set<InlineQueryResult> inlineQueryResults = new HashSet<>();
+            //todo: add pagination
+            recipeDAO.findRecipesByString(query).forEach(recipe -> {
+                if(recipe.getPhotoId() != null){
+                    InlineQueryResultCachedPhoto inlineQueryResult = InlineQueryResultCachedPhoto.builder().id(recipe.getId()).title(recipe.getName()).caption(recipe.toString())
+                            .photoFileId(recipe.getPhotoId()).build();
+                    inlineQueryResults.add(inlineQueryResult);
+                }
+
             });
             return inlineQueryResults;
         }

@@ -3,6 +3,7 @@ package org.example.cooking_recipe_bot.bot.handlers;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
+import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
@@ -10,7 +11,9 @@ import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.UserParser;
+import org.example.cooking_recipe_bot.utils.constants.BotMessageEnum;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
@@ -29,6 +32,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 public class CallbackQueryHandler implements UpdateHandler {
     UserDAO userDAO;
     InlineKeyboardMaker inlineKeyboardMaker;
+    ReplyKeyboardMaker replyKeyboardMaker;
     TelegramClient telegramClient;
     RecipeDAO recipeDAO;
     BotStateContextDAO botStateContextDAO;
@@ -42,7 +46,7 @@ public class CallbackQueryHandler implements UpdateHandler {
     }
 
     @Override
-    public SendMessage handle(Update update) throws TelegramApiException {
+    public BotApiMethod handle(Update update) throws TelegramApiException {
 
         final CallbackQuery callbackQuery = update.getCallbackQuery();
 
@@ -88,6 +92,9 @@ public class CallbackQueryHandler implements UpdateHandler {
                 int isOpened = Integer.parseInt(callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1, callbackQuery.getData().lastIndexOf(":")));
                 recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
                 Recipe recipe = recipeDAO.findRecipeById(recipeId);
+                if(recipe == null){
+                    return SendMessage.builder().chatId(chatId).text(BotMessageEnum.RECIPE_NOT_FOUND.getMessage()).build();
+                }
                 Message message = (Message) callbackQuery.getMessage();
                 if (message.hasText()) {
                     EditMessageText editMessageTextFromOpenButton = null;
@@ -111,7 +118,7 @@ public class CallbackQueryHandler implements UpdateHandler {
                     }
 
                     telegramClient.execute(editMessageTextFromOpenButton);
-                } else if (message.hasPhoto()) {
+                } else {
                     EditMessageCaption editMessageCaption = null;
                     if(isOpened == 0) {
                         editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId).caption(recipe.toString()).build();
@@ -134,12 +141,20 @@ public class CallbackQueryHandler implements UpdateHandler {
                 break;
             case ("change_photo_button"):
                 String userName = update.getCallbackQuery().getFrom().getUserName();
-                recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
-                sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое фото").build();
+                recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
+                sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое фото или напишите delete если хотите удалить фото").build();
                 telegramClient.execute(sendMessage);
 
                 botStateContextDAO.changeBotState(userName, BotState.WAITING_FOR_PHOTO, recipeId);
 
+                break;
+            case ("change_video_button"):
+                userName = update.getCallbackQuery().getFrom().getUserName();
+                recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
+                sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое видео или напишите delete если хотите удалить видео").build();
+                telegramClient.execute(sendMessage);
+
+                botStateContextDAO.changeBotState(userName, BotState.WAITING_FOR_VIDEO, recipeId);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + data);

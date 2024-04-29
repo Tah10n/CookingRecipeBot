@@ -16,6 +16,8 @@ public class Recipe {
     private String ingredients;
     private String instructions;
     private String photoId;
+    private String animationId;
+    private String videoId;
     private String hashtags;
 
     @Override

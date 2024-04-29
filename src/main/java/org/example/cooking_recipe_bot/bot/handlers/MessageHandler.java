@@ -15,8 +15,10 @@ import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.RecipeParser;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -77,16 +79,16 @@ public class MessageHandler implements UpdateHandler {
         SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("").build();
 
         if (message.hasText()) {
+
             String inputText = message.getText().toLowerCase();
             if (buttonActions.containsKey(inputText)) {
                 buttonActions.get(inputText).run();
             } else {
                 if (botStateContext.getCurrentBotState().equals(BotState.DEFAULT)) {
-                    //todo change search
-                    List<Recipe> recipesByHashtagsContains = recipeDAO.findRecipesByHashtagsContains(inputText);
+                    List<Recipe> recipes = recipeDAO.findRecipesByString(inputText);
 
                     try {
-                        sendRecipesList(update, recipesByHashtagsContains);
+                        sendRecipesList(update, recipes);
                     } catch (TelegramApiException e) {
                         log.error(e.getMessage());
                         e.printStackTrace();
@@ -97,10 +99,25 @@ public class MessageHandler implements UpdateHandler {
                 } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_EDITED_RECIPE)) {
 
                     sendMessage = updateRecipe(update, sendMessage, user);
+                } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_PHOTO) && inputText.equals("delete")) {
+                    String recipeId = botStateContextDAO.findBotStateContextByUserName(user.getUserName()).getAdditionalData();
+                    Recipe recipe = recipeDAO.findRecipeById(recipeId);
+                    recipe.setPhotoId(null);
+                    recipeDAO.saveRecipe(recipe);
+                    sendMessage.setText("Фото удалено");
+                    botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+                } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_VIDEO) && inputText.equals("delete")) {
+                    String recipeId = botStateContextDAO.findBotStateContextByUserName(user.getUserName()).getAdditionalData();
+                    Recipe recipe = recipeDAO.findRecipeById(recipeId);
+                    recipe.setVideoId(null);
+                    recipe.setAnimationId(null);
+                    recipeDAO.saveRecipe(recipe);
+                    sendMessage.setText("Видео удалено");
+                    botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
                 }
             }
 
-        } else if (message.hasPhoto()) {
+        } else  {
 
             if (botStateContext.getCurrentBotState().equals(BotState.DEFAULT)) {
                 sendMessage.setText("Отправьте ключевое слово или ингредиент для поиска рецептов");
@@ -108,10 +125,34 @@ public class MessageHandler implements UpdateHandler {
                 sendMessage = addNewRecipe(update, sendMessage, user);
             } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_PHOTO)) {
                 sendMessage = addPhoto(update, sendMessage, user);
+            } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_VIDEO)) {
+                sendMessage = addVideo(update, sendMessage, user);
             }
 
         }
 
+        return sendMessage;
+    }
+
+    private SendMessage addVideo(Update update, SendMessage sendMessage, User user) {
+        String recipeId = botStateContextDAO.findBotStateContextByUserName(user.getUserName()).getAdditionalData();
+        Recipe recipe = recipeDAO.findRecipeById(recipeId);
+        String file_id;
+        if(update.getMessage().getVideo() != null){
+            file_id = update.getMessage().getVideo().getFileId();
+            recipe.setVideoId(file_id);
+        } else if (update.getMessage().getAnimation() != null) {
+            file_id = update.getMessage().getAnimation().getFileId();
+            recipe.setAnimationId(file_id);
+        } else {
+            sendMessage.setText("There is no video in this message");
+            return sendMessage;
+        }
+
+        recipeDAO.updateRecipe(recipe);
+        sendMessage.setText("Видео обновлено");
+
+        botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
         return sendMessage;
     }
 
@@ -161,14 +202,16 @@ public class MessageHandler implements UpdateHandler {
     }
 
     private SendMessage addNewRecipe(Update update, SendMessage sendMessage, User user) {
-        if (!update.getMessage().hasText() && !update.getMessage().hasPhoto()) {
+        if (!update.hasMessage()) {
 
             botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+            log.error("No message in update");
             return sendMessage;
         }
 
         Recipe recipe;
         try {
+
             String inputText = update.getMessage().hasText() ? update.getMessage().getText() : update.getMessage().getCaption();
             recipe = RecipeParser.parseRecipeFromString(inputText);
         } catch (ParseException e) {
@@ -186,6 +229,14 @@ public class MessageHandler implements UpdateHandler {
                     .map(PhotoSize::getFileId)
                     .orElse("") : null;
             recipe.setPhotoId(f_id);
+
+            if(update.getMessage().hasAnimation()) {
+                String animationId = update.getMessage().getAnimation().getFileId();
+                recipe.setAnimationId(animationId);
+            } else if(update.getMessage().hasVideo()) {
+                String videoId = update.getMessage().getVideo().getFileId();
+                recipe.setVideoId(videoId);
+            }
 
             Recipe savedRecipe = recipeDAO.saveRecipe(recipe);
 
@@ -209,7 +260,7 @@ public class MessageHandler implements UpdateHandler {
                 sendUsersList(update);
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
         };
     }
@@ -222,7 +273,7 @@ public class MessageHandler implements UpdateHandler {
                 telegramClient.execute(sendMessage);
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
 
             botStateContextDAO.changeBotState(update.getMessage().getFrom().getUserName(), BotState.ADDING_RECIPE);
@@ -277,47 +328,67 @@ public class MessageHandler implements UpdateHandler {
                 telegramClient.execute(SendMessage.builder().chatId(chatId).text("Привет, " + user.getUserName() + "\n\n" + BotMessageEnum.HELP_MESSAGE.getMessage()).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
         };
     }
 
     private boolean checkIsRecipeAlreadyExists(Recipe recipe) {
-        String recipeName = recipe.getName();
-        if (recipeDAO.findRecipeByNameEqualsIgnoreCase(recipeName) != null) {
-            return true;
-        }
-        return false;
+        String recipeName = recipe.getName().toLowerCase();
+        return recipeDAO.findRecipeByNameEqualsIgnoreCase(recipeName) != null;
     }
 
     private void sendRecipesList(Update update, List<Recipe> recipeList) throws TelegramApiException {
         Long userId = update.getMessage().getFrom().getId();
+        User user = userDAO.findById(userId).isPresent() ? userDAO.findById(userId).get() : null;
+        if (user == null) {
+            throw new TelegramApiException("User not found by id: " + userId);
+        }
         //TODO: add pagination
-        if(recipeList.isEmpty()) {
+        if (recipeList.isEmpty()) {
             SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(BotMessageEnum.RECIPE_NOT_FOUND.getMessage()).build();
             telegramClient.execute(sendMessage);
             return;
         }
         for (Recipe recipe : recipeList) {
-            if (recipe.getPhotoId() == null) {
-                SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text("Рецепт:").build();
-
-                if (userDAO.findById(userId).get().getIsAdmin()) {
-                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe,0));
+            if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
+                SendAnimation sendAnimation = SendAnimation.builder().chatId(update.getMessage().getChatId()).animation(new InputFile(recipe.getAnimationId())).build();
+                if (user.getIsAdmin().equals(Boolean.TRUE)) {
+                    sendAnimation.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, 0));
                 } else {
-                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe,0));
+                    sendAnimation.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0));
                 }
-                telegramClient.execute(sendMessage);
-            } else {
+                telegramClient.execute(sendAnimation);
+            } else if (recipe.getVideoId() != null) {
+                SendVideo sendVideo = SendVideo.builder().chatId(update.getMessage().getChatId())
+                        .video(new InputFile(recipe.getVideoId())).build();
+                if (user.getIsAdmin().equals(Boolean.TRUE)) {
+                    sendVideo.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, 0));
+                } else {
+                    sendVideo.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0));
+                }
+                telegramClient.execute(sendVideo);
+            } else if (recipe.getPhotoId() != null) {
                 SendPhoto sendPhoto = SendPhoto.builder().chatId(update.getMessage().getChatId())
                         .caption("").photo(new InputFile(recipe.getPhotoId())).build();
 
-                if (userDAO.findById(userId).get().getIsAdmin()) {
-                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe,0));
+                if (user.getIsAdmin().equals(Boolean.TRUE)) {
+                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, 0));
                 } else {
-                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe,0));
+                    sendPhoto.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0));
                 }
                 telegramClient.execute(sendPhoto);
+
+            } else {
+
+                SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text("Рецепт:").build();
+
+                if (user.getIsAdmin().equals(Boolean.TRUE)) {
+                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, 0));
+                } else {
+                    sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0));
+                }
+                telegramClient.execute(sendMessage);
             }
 
         }
@@ -326,14 +397,14 @@ public class MessageHandler implements UpdateHandler {
     private void sendUsersList(Update update) throws TelegramApiException {
         List<User> allUsers = userDAO.findAllUsers();
 
-        for (User user1 : allUsers) {
-            if (user1.getUserName().equals(update.getMessage().getFrom().getUserName()) || userDAO.isFirstAdmin(user1))
+        for (User user : allUsers) {
+            if (user.getUserName().equals(update.getMessage().getFrom().getUserName()) || userDAO.isFirstAdmin(user))
                 continue;
-            SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(user1.toString()).build();
-            if (user1.getIsAdmin()) {
-                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserAdminKeyboard(user1.getId()));
+            SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(user.toString()).build();
+            if (user.getIsAdmin().equals(Boolean.TRUE)) {
+                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserAdminKeyboard(user.getId()));
             } else {
-                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserKeyboard(user1.getId()));
+                sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserKeyboard(user.getId()));
             }
             telegramClient.execute(sendMessage);
         }
@@ -355,11 +426,7 @@ public class MessageHandler implements UpdateHandler {
         user.setFirstName(update.getMessage().getFrom().getFirstName());
         user.setLastName(update.getMessage().getFrom().getLastName());
         user.setUserName(update.getMessage().getFrom().getUserName());
-        if (userDAO.isFirstAdmin(user)) {
-            user.setIsAdmin(true);
-        } else {
-            user.setIsAdmin(false);
-        }
+        user.setIsAdmin(userDAO.isFirstAdmin(user));
         userDAO.saveUser(user);
         return user;
     }

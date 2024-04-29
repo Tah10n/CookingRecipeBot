@@ -19,6 +19,9 @@ public class RecipeParser {
         }
         Recipe recipe = new Recipe();
         String name = lines[0].trim().toLowerCase();
+        if(name.length() > 30) {
+            throw new ParseException("Recipe name is too long", recipeString.lastIndexOf(name));
+        }
         recipe.setName(name);
 
         // Extract the ingredients
