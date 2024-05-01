@@ -1,12 +1,16 @@
 package org.example.cooking_recipe_bot.utils;
 
 import org.example.cooking_recipe_bot.db.entity.Recipe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RecipeParser {
+    private static final Logger log = LoggerFactory.getLogger(RecipeParser.class);
+
     public static Recipe parseRecipeFromString(String recipeString) throws ParseException {
         if(recipeString == null) {
             throw new ParseException("Recipe string is null", 0);
@@ -61,7 +65,8 @@ public class RecipeParser {
             hashtagsBuilder.append(hashtag).append("\n");
         }
         if(hashtagsBuilder.length() == 0) {
-            throw new ParseException("Recipe string has no hashtags", recipeString.lastIndexOf(name));
+            //throw new ParseException("Recipe string has no hashtags", recipeString.lastIndexOf(name));
+            log.info("where is no hashtags in added recipe");
         }
         recipe.setHashtags(hashtagsBuilder.toString().trim());
 

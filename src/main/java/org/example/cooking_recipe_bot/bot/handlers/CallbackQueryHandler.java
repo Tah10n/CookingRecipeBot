@@ -12,71 +12,79 @@ import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.UserParser;
 import org.example.cooking_recipe_bot.utils.constants.BotMessageEnum;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.MaybeInaccessibleMessage;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ForceReplyKeyboard;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 @Slf4j
-@Component
+@Service
 public class CallbackQueryHandler implements UpdateHandler {
-    UserDAO userDAO;
+    private final UserDAO userDAO;
     InlineKeyboardMaker inlineKeyboardMaker;
     ReplyKeyboardMaker replyKeyboardMaker;
     TelegramClient telegramClient;
     RecipeDAO recipeDAO;
     BotStateContextDAO botStateContextDAO;
 
-    public CallbackQueryHandler(UserDAO userDAO, InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO) {
-        this.userDAO = userDAO;
+    public CallbackQueryHandler(InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, UserDAO userDAO) {
+
         this.inlineKeyboardMaker = inlineKeyboardMaker;
         this.telegramClient = telegramClient;
         this.recipeDAO = recipeDAO;
         this.botStateContextDAO = botStateContextDAO;
+        this.userDAO = userDAO;
     }
 
     @Override
     public BotApiMethod handle(Update update) throws TelegramApiException {
-
         final CallbackQuery callbackQuery = update.getCallbackQuery();
 
         String data = callbackQuery.getData().substring(0, callbackQuery.getData().indexOf(":"));
         long chatId = callbackQuery.getMessage().getChatId();
         int messageId = callbackQuery.getMessage().getMessageId();
+        Long userId = update.getCallbackQuery().getFrom().getId();
         SendMessage sendMessage;
         switch (data) {
             case ("delete_user_button"):
-                long userId = getUserIdFromMessage((Message) callbackQuery.getMessage());
-                sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userId).getUserName() + " удален").build();
+                long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
+                sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " удален").build();
                 DeleteMessage deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
                 telegramClient.execute(sendMessage);
                 telegramClient.execute(deleteMessage);
-                userDAO.deleteUser(userId);
+                userDAO.deleteUser(userIdFromMessage);
                 break;
             case ("set_admin_button"):
-                userId = getUserIdFromMessage((Message) callbackQuery.getMessage());
-                userDAO.setAdmin(userId);
-                sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userId).getUserName() + " стал администратором").build();
+                userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
+                userDAO.setAdmin(userIdFromMessage);
+                sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " стал администратором").build();
                 telegramClient.execute(sendMessage);
-                EditMessageText editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userId).toString()).replyMarkup(inlineKeyboardMaker.getUserAdminKeyboard(userId)).build();
+                EditMessageText editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userIdFromMessage).toString()).replyMarkup(inlineKeyboardMaker.getUserAdminKeyboard(userIdFromMessage)).build();
                 telegramClient.execute(editMessageText);
                 break;
             case ("unset_admin_button"):
-                userId = getUserIdFromMessage((Message) callbackQuery.getMessage());
-                userDAO.unsetAdmin(userId);
-                sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userId).getUserName() + " больше не администратор").build();
+                userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
+                userDAO.unsetAdmin(userIdFromMessage);
+                sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " больше не администратор").build();
                 telegramClient.execute(sendMessage);
-                editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userId).toString()).replyMarkup(inlineKeyboardMaker.getUserKeyboard(userId)).build();
+                editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userIdFromMessage).toString()).replyMarkup(inlineKeyboardMaker.getUserKeyboard(userIdFromMessage)).build();
                 telegramClient.execute(editMessageText);
                 break;
             case ("delete_recipe_button"):
@@ -89,51 +97,62 @@ public class CallbackQueryHandler implements UpdateHandler {
                 telegramClient.execute(deleteMessage1);
                 break;
             case ("open_recipe_button"):
-                int isOpened = Integer.parseInt(callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1, callbackQuery.getData().lastIndexOf(":")));
+                int opened = Integer.parseInt(callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1, callbackQuery.getData().lastIndexOf(":")));
                 recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
                 Recipe recipe = recipeDAO.findRecipeById(recipeId);
-                if(recipe == null){
+                if (recipe == null) {
                     return SendMessage.builder().chatId(chatId).text(BotMessageEnum.RECIPE_NOT_FOUND.getMessage()).build();
                 }
                 Message message = (Message) callbackQuery.getMessage();
+
+                EditMessageText editMessageTextFromOpenButton = null;
                 if (message.hasText()) {
-                    EditMessageText editMessageTextFromOpenButton = null;
-                    if (isOpened == 0) {
+                    if (opened == 0) {
                         editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString()).build();
-
-                        if (userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
-                            editMessageTextFromOpenButton.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, 1));
-                        } else {
-                            editMessageTextFromOpenButton.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 1));
-                        }
-
-                    } else if (isOpened == 1) {
+                        editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
+                    } else if (opened == 1) {
                         editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text("Рецепт:").build();
-
-                        if (userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
-                            editMessageTextFromOpenButton.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, 0));
-                        } else {
-                            editMessageTextFromOpenButton.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0));
+                        editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 0, userId));
+                        if (recipe.getVideoId() != null || recipe.getAnimationId() != null || recipe.getPhotoId() != null) {
+                            deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
+                            telegramClient.execute(deleteMessage);
+                            EditMessageCaption editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId - 1).caption("").build();
+                            editMessageCaption.setReplyMarkup(getReplyMarkup(recipe, 0, userId));
+                            telegramClient.execute(editMessageCaption);
+                            break;
                         }
                     }
-
                     telegramClient.execute(editMessageTextFromOpenButton);
                 } else {
-                    EditMessageCaption editMessageCaption = null;
-                    if(isOpened == 0) {
-                        editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId).caption(recipe.toString()).build();
-                        if (userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
-                            editMessageCaption.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe,1));
+                    EditMessageCaption editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId).caption("").build();
+                    if (opened == 0) {
+                        if (recipe.toString().length() > 1024) {
+                            deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
+                            telegramClient.execute(deleteMessage);
+                            if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
+                                SendAnimation sendAnimation = SendAnimation.builder().chatId(chatId).animation(new InputFile(recipe.getAnimationId())).build();
+                                telegramClient.execute(sendAnimation);
+                            } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
+                                SendVideo sendVideo = SendVideo.builder().chatId(chatId).video(new InputFile(recipe.getVideoId())).build();
+                                telegramClient.execute(sendVideo);
+
+                            } else if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
+                                SendPhoto sendPhoto = SendPhoto.builder().chatId(chatId).photo(new InputFile(recipe.getPhotoId())).build();
+                                telegramClient.execute(sendPhoto);
+
+                            }
+                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).build();
+                            sendMessage.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
+                            telegramClient.execute(sendMessage);
+                            break;
                         } else {
-                            editMessageCaption.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe,1));
+                            editMessageCaption.setCaption(recipe.toString());
+                            editMessageCaption.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
                         }
-                    } else if (isOpened == 1) {
-                        editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId).caption("").build();
-                        if (userDAO.getUserById(update.getCallbackQuery().getFrom().getId()).getIsAdmin()) {
-                            editMessageCaption.setReplyMarkup(inlineKeyboardMaker.getRecipeAdminKeyboard(recipe,0));
-                        } else {
-                            editMessageCaption.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe,0));
-                        }
+
+                    } else if (opened == 1) {
+                        editMessageCaption.setCaption("");
+                        editMessageCaption.setReplyMarkup(getReplyMarkup(recipe, 0, userId));
                     }
 
                     telegramClient.execute(editMessageCaption);
@@ -163,6 +182,8 @@ public class CallbackQueryHandler implements UpdateHandler {
         return null;
     }
 
+
+
     private long getUserIdFromMessage(Message message) {
         String text = message.getText();
         User user = UserParser.parseUserFromString(text);
@@ -170,5 +191,16 @@ public class CallbackQueryHandler implements UpdateHandler {
 
     }
 
+    private InlineKeyboardMarkup getReplyMarkup(Recipe recipe, int state, long userId) {
+        if (userDAO.getUserById(userId).getIsAdmin()) {
+            return inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, state);
+        } else {
+            return inlineKeyboardMaker.getRecipeKeyboard(recipe, state);
+        }
+    }
+
+    private void setCaptionMessage(EditMessageCaption editMessageCaption, Recipe recipe, int state, long userId) {
+
+    }
 
 }

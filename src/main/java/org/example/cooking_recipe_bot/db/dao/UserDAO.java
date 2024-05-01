@@ -1,7 +1,9 @@
 package org.example.cooking_recipe_bot.db.dao;
 
+import org.example.cooking_recipe_bot.config.BotConfig;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.db.repository.UsersRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -10,13 +12,13 @@ import java.util.Optional;
 
 @Service
 public class UserDAO {
-   private String botOwner;
+    private String botOwner;
 
     private UsersRepository usersRepository;
 
-    public UserDAO(UsersRepository usersRepository, @Value("${telegrambot.botowner}") String botOwner) {
+    public UserDAO(UsersRepository usersRepository, BotConfig botConfig) {
         this.usersRepository = usersRepository;
-        this.botOwner = botOwner;
+        this.botOwner = botConfig.getBotOwner();
     }
 
 
@@ -37,9 +39,9 @@ public class UserDAO {
     }
 
     public boolean isFirstAdmin(User user) {
-            if (user.getUserName().equals(botOwner)) {
-                return true;
-            }
+        if (user.getUserName().equals(botOwner)) {
+            return true;
+        }
         return false;
     }
 

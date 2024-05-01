@@ -2,7 +2,25 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.2.4'
     id 'io.spring.dependency-management' version '1.1.4'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
+
+//jar {
+//    manifest {
+//        attributes(
+//                'Main-Class': 'org.example.cooking_recipe_bot.CookingRecipeBotApplication'
+//        )
+//    }
+//    archiveBaseName.set('cooking_recipe_bot')
+//    archiveClassifier.set('')
+//    archiveVersion.set('')
+//    exclude('**.env')
+//}
+tasks.named("bootJar") {
+    launchScript()
+}
+
+
 
 group = 'org.example'
 version = '0.0.1-SNAPSHOT'

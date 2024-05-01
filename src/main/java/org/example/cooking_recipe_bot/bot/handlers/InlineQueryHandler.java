@@ -12,6 +12,7 @@ import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.constants.BotMessageEnum;
 import org.example.cooking_recipe_bot.utils.RecipeParser;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -29,7 +30,7 @@ import java.text.ParseException;
 import java.util.*;
 
 @Slf4j
-@Component
+@Service
 public class InlineQueryHandler implements UpdateHandler {
     UserDAO userDAO;
     InlineKeyboardMaker inlineKeyboardMaker;

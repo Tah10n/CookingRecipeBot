@@ -15,6 +15,7 @@ import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.RecipeParser;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
@@ -33,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-@Component
+@Service
 
 public class MessageHandler implements UpdateHandler {
     private final RecipeDAO recipeDAO;
@@ -169,6 +170,7 @@ public class MessageHandler implements UpdateHandler {
             recipeToEdit.setIngredients(recipe.getIngredients());
             recipeToEdit.setInstructions(recipe.getInstructions());
             recipeToEdit.setHashtags(recipe.getHashtags());
+
             recipeDAO.updateRecipe(recipeToEdit);
             sendMessage.setText("Рецепт изменен");
             sendRecipesList(update, List.of(recipeToEdit));
