@@ -5,7 +5,9 @@ import org.example.cooking_recipe_bot.db.repository.RecipesRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class RecipeDAO {
@@ -54,12 +56,12 @@ public class RecipeDAO {
     }
 
     public List<Recipe> findRecipesByString(String string) {
-        List<Recipe> recipes = new ArrayList<>();
+        Set<Recipe> recipes = new HashSet<>();
         string = string.toLowerCase();
         recipesRepository.findRecipesByNameContainsIgnoreCase(string).forEach(recipes::add);
         recipesRepository.findRecipesByHashtagsContainsIgnoreCase(string).forEach(recipes::add);
         recipesRepository.findRecipesByIngredientsContainsIgnoreCase(string).forEach(recipes::add);
-        return recipes;
+        return recipes.stream().toList();
     }
 
     public Recipe findRecipeById(String recipeId) {
