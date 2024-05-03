@@ -12,9 +12,10 @@ tasks.named("bootJar") {
 
 docker {
     springBootApplication {
-        baseImage = 'openjdk:17-alpine'
-        ports = [8443]
 
+        baseImage = 'openjdk:17-alpine'
+        maintainer = 'Andrei Surkov'
+        ports = [8443]
 
     }
 }
@@ -52,3 +53,4 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
