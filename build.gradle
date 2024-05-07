@@ -21,7 +21,7 @@ docker {
 }
 
 
-group = 'org.example'
+group = 'tah10n'
 version = '0.0.1-SNAPSHOT'
 
 java {
