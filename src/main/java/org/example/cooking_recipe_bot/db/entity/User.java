@@ -13,6 +13,7 @@ public class User {
     private String lastName;
     private String userName;
     private Boolean isAdmin;
+    private Long chatId;
 
     @Override
     public String toString() {

@@ -27,6 +27,7 @@ public class SpringConfig {
 
         CookBookTelegramBot bot = new CookBookTelegramBot(botConfig.getBotPath(), telegramFacade::handleUpdate, botConfig::setWebhook, botConfig::deleteWebhook);
 
+
         HttpResponse response = botConfig.setWebhook();
         int responseOnSetWebhookCode = response.statusCode();
         if (responseOnSetWebhookCode != 200) {

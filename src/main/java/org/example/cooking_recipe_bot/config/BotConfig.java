@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -31,10 +32,15 @@ public class BotConfig {
     public HttpResponse<String> setWebhook() {
         var telegramUrl = "https://api.telegram.org/bot" + getBotToken();
         var url = telegramUrl + "/setWebhook?url=" + getBotPath();
-        final HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .build();
+        final HttpClient client = HttpClient.newBuilder().build();
+        HttpRequest request = null;
+        try {
+            request = HttpRequest.newBuilder()
+                    .uri(new URI(url))
+                    .build();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
         HttpResponse<String> response = null;
         try {
             response = client.send(request, HttpResponse.BodyHandlers.ofString());
