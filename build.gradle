@@ -5,24 +5,14 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
-//jar {
-//    manifest {
-//        attributes(
-//                'Main-Class': 'org.example.cooking_recipe_bot.CookingRecipeBotApplication'
-//        )
-//    }
-//    archiveBaseName.set('cooking_recipe_bot')
-//    archiveClassifier.set('')
-//    archiveVersion.set('')
-//    exclude('**.env')
-//}
+
 tasks.named("bootJar") {
     launchScript()
 }
 
 
 
-group = 'org.example'
+group = 'tah10n'
 version = '0.0.1-SNAPSHOT'
 
 java {
