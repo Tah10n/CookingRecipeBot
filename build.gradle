@@ -3,16 +3,25 @@ plugins {
     id 'org.springframework.boot' version '3.2.4'
     id 'io.spring.dependency-management' version '1.1.4'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.bmuschko.docker-spring-boot-application' version '9.4.0'
 }
-
 
 tasks.named("bootJar") {
     launchScript()
 }
 
+docker {
+    springBootApplication {
+
+        baseImage = 'openjdk:17-alpine'
+        maintainer = 'Andrei Surkov'
+        ports = [8443]
+
+    }
+}
 
 
-group = 'tah10n'
+group = 'org.example'
 version = '0.0.1-SNAPSHOT'
 
 java {
@@ -44,3 +53,4 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+

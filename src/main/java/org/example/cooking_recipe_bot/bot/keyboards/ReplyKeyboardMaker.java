@@ -47,7 +47,9 @@ public class ReplyKeyboardMaker {
                         KeyboardButton.builder().text(ButtonNameEnum.LUNCH_BUTTON.getButtonName()).build(),
                         KeyboardButton.builder().text(ButtonNameEnum.DINNER_BUTTON.getButtonName()).build()))
                 .keyboardRow(new KeyboardRow(
-                        KeyboardButton.builder().text(ButtonNameEnum.HELP_BUTTON.getButtonName()).build())).build();
+                        KeyboardButton.builder().text(ButtonNameEnum.HELP_BUTTON.getButtonName()).build()))
+                .keyboardRow(new KeyboardRow(
+                        KeyboardButton.builder().text(ButtonNameEnum.SEND_NOTIFICATION.getButtonName()).build())).build();
 
         replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setResizeKeyboard(true);
