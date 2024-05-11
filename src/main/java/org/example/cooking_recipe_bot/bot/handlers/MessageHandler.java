@@ -209,7 +209,7 @@ public class MessageHandler implements UpdateHandler {
             sendMessage.setText("Рецепт изменен");
             sendRecipesList(update, List.of(recipeToEdit));
         } catch (ParseException e) {
-            sendMessage.setText("Не удалось распарсить рецепт");
+            sendMessage.setText(BotMessageEnum.RECIPE_PARSING_ERROR.getMessage() + e.getMessage());
             e.printStackTrace();
             log.error(e.getMessage());
 
@@ -253,7 +253,7 @@ public class MessageHandler implements UpdateHandler {
         } catch (ParseException e) {
             log.error(e.getMessage());
             e.printStackTrace();
-            sendMessage.setText(BotMessageEnum.RECIPE_PARSING_ERROR.getMessage());
+            sendMessage.setText(BotMessageEnum.RECIPE_PARSING_ERROR.getMessage() + e.getMessage());
             return sendMessage;
         }
 

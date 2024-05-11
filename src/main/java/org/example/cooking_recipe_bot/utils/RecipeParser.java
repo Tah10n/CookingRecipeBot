@@ -23,7 +23,7 @@ public class RecipeParser {
         }
         Recipe recipe = new Recipe();
         String name = lines[0].trim().toLowerCase();
-        if(name.length() > 30) {
+        if(name.length() > 100) {
             throw new ParseException("Recipe name is too long", recipeString.lastIndexOf(name));
         }
         recipe.setName(name);
@@ -41,7 +41,7 @@ public class RecipeParser {
         if(ingredientsBuilder.length() == 0) {
             throw new ParseException("Recipe string has no ingredients", recipeString.lastIndexOf(name));
         }
-        recipe.setIngredients(ingredientsBuilder.toString().trim());
+        recipe.setIngredients(ingredientsBuilder.toString().trim().toLowerCase());
 
         // Extract the instructions
         Pattern instructionPattern = Pattern.compile("(?<=\\n)([^•#]+)");
@@ -54,7 +54,8 @@ public class RecipeParser {
         if(instructionsBuilder.length() == 0) {
             throw new ParseException("Recipe string has no instructions", recipeString.lastIndexOf(name));
         }
-        recipe.setInstructions(instructionsBuilder.toString().trim());
+
+        recipe.setInstructions(instructionsBuilder.toString().trim().replaceAll("\\n+", "\n"));
 
         // Extract the hashtags
         Pattern hashtagsPattern = Pattern.compile("#([^#]+)");
