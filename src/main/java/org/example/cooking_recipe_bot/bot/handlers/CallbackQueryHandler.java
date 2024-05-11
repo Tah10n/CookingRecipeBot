@@ -53,11 +53,11 @@ public class CallbackQueryHandler implements UpdateHandler {
         long chatId = callbackQuery.getMessage().getChatId();
         int messageId = callbackQuery.getMessage().getMessageId();
         long userId = update.getCallbackQuery().getFrom().getId();
-        long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
+
         SendMessage sendMessage;
         switch (data) {
             case ("delete_user_button"):
-
+                long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " удален").build();
                 DeleteMessage deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
                 telegramClient.execute(sendMessage);
@@ -65,6 +65,7 @@ public class CallbackQueryHandler implements UpdateHandler {
                 userDAO.deleteUser(userIdFromMessage);
                 break;
             case ("set_admin_button"):
+                userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
                 userDAO.setAdmin(userIdFromMessage);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " стал администратором").build();
                 telegramClient.execute(sendMessage);
