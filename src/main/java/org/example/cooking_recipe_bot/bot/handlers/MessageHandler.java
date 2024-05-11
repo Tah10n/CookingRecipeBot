@@ -58,10 +58,10 @@ public class MessageHandler implements UpdateHandler {
         Message message = update.getMessage();
 
         User user = getUserFromUpdate(update);
-        BotStateContext botStateContext = botStateContextDAO.findBotStateContextByUserName(user.getUserName());
+        BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(user.getId());
         if (botStateContext == null) {
             botStateContext = new BotStateContext();
-            botStateContext.setUserName(user.getUserName());
+            botStateContext.setId(String.valueOf(user.getId()));
             botStateContext.setCurrentBotState(BotState.DEFAULT);
             botStateContextDAO.saveBotStateContext(botStateContext);
         }
@@ -95,42 +95,42 @@ public class MessageHandler implements UpdateHandler {
                         e.printStackTrace();
                     }
                 } else if (botStateContext.getCurrentBotState().equals(BotState.ADDING_RECIPE)) {
-                    sendMessage = addNewRecipe(update, sendMessage, user);
+                    return addNewRecipe(update, sendMessage, user);
 
                 } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_EDITED_RECIPE)) {
 
-                    sendMessage = updateRecipe(update, sendMessage, user);
+                    return updateRecipe(update, sendMessage, user);
                 } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_PHOTO) && inputText.equals("delete")) {
-                    String recipeId = botStateContextDAO.findBotStateContextByUserName(user.getUserName()).getAdditionalData();
+                    String recipeId = botStateContextDAO.findBotStateContextById(user.getId()).getAdditionalData();
                     Recipe recipe = recipeDAO.findRecipeById(recipeId);
                     recipe.setPhotoId(null);
                     recipeDAO.saveRecipe(recipe);
                     sendMessage.setText("Фото удалено");
-                    botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+                    botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
                 } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_VIDEO) && inputText.equals("delete")) {
-                    String recipeId = botStateContextDAO.findBotStateContextByUserName(user.getUserName()).getAdditionalData();
+                    String recipeId = botStateContextDAO.findBotStateContextById(user.getId()).getAdditionalData();
                     Recipe recipe = recipeDAO.findRecipeById(recipeId);
                     recipe.setVideoId(null);
                     recipe.setAnimationId(null);
                     recipeDAO.saveRecipe(recipe);
                     sendMessage.setText("Видео удалено");
-                    botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+                    botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
                 } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_NOTIFICATION)) {
-                    sendMessage = sendNotificationToUsers(update, user);
+                    return sendNotificationToUsers(update, user);
 
                 }
             }
 
-        } else  {
+        } else {
 
             if (botStateContext.getCurrentBotState().equals(BotState.DEFAULT)) {
                 sendMessage.setText("Отправьте ключевое слово или ингредиент для поиска рецептов");
             } else if (botStateContext.getCurrentBotState().equals(BotState.ADDING_RECIPE)) {
-                sendMessage = addNewRecipe(update, sendMessage, user);
+                return addNewRecipe(update, sendMessage, user);
             } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_PHOTO)) {
-                sendMessage = addPhoto(update, sendMessage, user);
+                return addPhoto(update, sendMessage, user);
             } else if (botStateContext.getCurrentBotState().equals(BotState.WAITING_FOR_VIDEO)) {
-                sendMessage = addVideo(update, sendMessage, user);
+                return addVideo(update, sendMessage, user);
             }
 
         }
@@ -150,7 +150,7 @@ public class MessageHandler implements UpdateHandler {
                 e.printStackTrace();
             }
         }
-        botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+        botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return SendMessage.builder().chatId(update.getMessage().getChatId()).text("Уведомления отправлены").build();
     }
 
@@ -165,20 +165,20 @@ public class MessageHandler implements UpdateHandler {
                 e.printStackTrace();
             }
 
-            botStateContextDAO.changeBotState(update.getMessage().getFrom().getUserName(), BotState.WAITING_FOR_NOTIFICATION);
+            botStateContextDAO.changeBotState(update.getMessage().getFrom().getId(), BotState.WAITING_FOR_NOTIFICATION);
         };
     }
 
     private SendMessage addVideo(Update update, SendMessage sendMessage, User user) {
-        String recipeId = botStateContextDAO.findBotStateContextByUserName(user.getUserName()).getAdditionalData();
+        String recipeId = botStateContextDAO.findBotStateContextById(user.getId()).getAdditionalData();
         Recipe recipe = recipeDAO.findRecipeById(recipeId);
-        String file_id;
-        if(update.getMessage().getVideo() != null){
-            file_id = update.getMessage().getVideo().getFileId();
-            recipe.setVideoId(file_id);
+        String fileId;
+        if (update.getMessage().getVideo() != null) {
+            fileId = update.getMessage().getVideo().getFileId();
+            recipe.setVideoId(fileId);
         } else if (update.getMessage().getAnimation() != null) {
-            file_id = update.getMessage().getAnimation().getFileId();
-            recipe.setAnimationId(file_id);
+            fileId = update.getMessage().getAnimation().getFileId();
+            recipe.setAnimationId(fileId);
         } else {
             sendMessage.setText("There is no video in this message");
             return sendMessage;
@@ -187,7 +187,7 @@ public class MessageHandler implements UpdateHandler {
         recipeDAO.updateRecipe(recipe);
         sendMessage.setText("Видео обновлено");
 
-        botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+        botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
     }
 
@@ -218,29 +218,29 @@ public class MessageHandler implements UpdateHandler {
             log.error(e.getMessage());
         }
 
-        botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+        botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
     }
 
     private SendMessage addPhoto(Update update, SendMessage sendMessage, User user) {
-        String recipeId = botStateContextDAO.findBotStateContextByUserName(user.getUserName()).getAdditionalData();
+        String recipeId = botStateContextDAO.findBotStateContextById(user.getId()).getAdditionalData();
         Recipe recipe = recipeDAO.findRecipeById(recipeId);
-        String f_id = update.getMessage().hasPhoto() ? update.getMessage().getPhoto().stream()
+        String fileId = update.getMessage().hasPhoto() ? update.getMessage().getPhoto().stream()
                 .max(Comparator.comparing(PhotoSize::getFileSize))
                 .map(PhotoSize::getFileId)
                 .orElse("") : null;
-        recipe.setPhotoId(f_id);
+        recipe.setPhotoId(fileId);
         recipeDAO.updateRecipe(recipe);
         sendMessage.setText("Фото обновлено");
 
-        botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+        botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
     }
 
     private SendMessage addNewRecipe(Update update, SendMessage sendMessage, User user) {
         if (!update.hasMessage()) {
 
-            botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+            botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             log.error("No message in update");
             return sendMessage;
         }
@@ -260,16 +260,16 @@ public class MessageHandler implements UpdateHandler {
         if (checkIsRecipeAlreadyExists(recipe)) {
             sendMessage.setText(BotMessageEnum.RECIPE_ALREADY_EXISTS.getMessage());
         } else {
-            String f_id = update.getMessage().hasPhoto() ? update.getMessage().getPhoto().stream()
+            String fileId = update.getMessage().hasPhoto() ? update.getMessage().getPhoto().stream()
                     .max(Comparator.comparing(PhotoSize::getFileSize))
                     .map(PhotoSize::getFileId)
                     .orElse("") : null;
-            recipe.setPhotoId(f_id);
+            recipe.setPhotoId(fileId);
 
-            if(update.getMessage().hasAnimation()) {
+            if (update.getMessage().hasAnimation()) {
                 String animationId = update.getMessage().getAnimation().getFileId();
                 recipe.setAnimationId(animationId);
-            } else if(update.getMessage().hasVideo()) {
+            } else if (update.getMessage().hasVideo()) {
                 String videoId = update.getMessage().getVideo().getFileId();
                 recipe.setVideoId(videoId);
             }
@@ -286,7 +286,7 @@ public class MessageHandler implements UpdateHandler {
             }
         }
 
-        botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+        botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
     }
 
@@ -312,14 +312,14 @@ public class MessageHandler implements UpdateHandler {
                 e.printStackTrace();
             }
 
-            botStateContextDAO.changeBotState(update.getMessage().getFrom().getUserName(), BotState.ADDING_RECIPE);
+            botStateContextDAO.changeBotState(update.getMessage().getFrom().getId(), BotState.ADDING_RECIPE);
         };
     }
 
     private @NotNull Runnable getFindRandomRecipeAction(Update update) {
         return () -> {
 
-            botStateContextDAO.changeBotState(update.getMessage().getFrom().getUserName(), BotState.DEFAULT);
+            botStateContextDAO.changeBotState(update.getMessage().getFrom().getId(), BotState.DEFAULT);
 
             Recipe randomRecipe = recipeDAO.getRandomRecipe();
             if (randomRecipe != null) {
@@ -358,7 +358,7 @@ public class MessageHandler implements UpdateHandler {
 
     private @NotNull Runnable getStartAction(Update update, User user) {
         return () -> {
-            botStateContextDAO.changeBotState(user.getUserName(), BotState.DEFAULT);
+            botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             long chatId = update.getMessage().getChatId();
             try {
                 telegramClient.execute(SendMessage.builder().chatId(chatId).text("Привет, " + user.getUserName() + "\n\n" + BotMessageEnum.HELP_MESSAGE.getMessage()).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
@@ -434,8 +434,9 @@ public class MessageHandler implements UpdateHandler {
         List<User> allUsers = userDAO.findAllUsers();
 
         for (User user : allUsers) {
-            if (user.getUserName().equals(update.getMessage().getFrom().getUserName()) || userDAO.isFirstAdmin(user))
+            if (user.getUserName() != null && (userDAO.isFirstAdmin(user.getUserName()) || user.getUserName().equals(update.getMessage().getFrom().getUserName()))) {
                 continue;
+            }
             SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(user.toString()).build();
             if (user.getIsAdmin().equals(Boolean.TRUE)) {
                 sendMessage.setReplyMarkup(inlineKeyboardMaker.getUserAdminKeyboard(user.getId()));
@@ -461,8 +462,9 @@ public class MessageHandler implements UpdateHandler {
         user.setId(update.getMessage().getFrom().getId());
         user.setFirstName(update.getMessage().getFrom().getFirstName());
         user.setLastName(update.getMessage().getFrom().getLastName());
-        user.setUserName(update.getMessage().getFrom().getUserName());
-        user.setIsAdmin(userDAO.isFirstAdmin(user));
+        String userName = update.getMessage().getFrom().getUserName();
+        user.setUserName(userName);
+        user.setIsAdmin(userDAO.isFirstAdmin(userName));
         user.setChatId(update.getMessage().getChatId());
         userDAO.saveUser(user);
         return user;

@@ -7,27 +7,21 @@ import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
-import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
-import org.example.cooking_recipe_bot.utils.constants.BotMessageEnum;
-import org.example.cooking_recipe_bot.utils.RecipeParser;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResult;
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultDocument;
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedDocument;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedPhoto;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-import java.text.ParseException;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -49,14 +43,13 @@ public class InlineQueryHandler implements UpdateHandler {
     public BotApiMethod<?> handle(Update update) throws TelegramApiException {
         InlineQuery inlineQuery = update.getInlineQuery();
         String query = inlineQuery.getQuery();
-        User user = userDAO.getUserByUserName(inlineQuery.getFrom().getUserName());
         long chatId = inlineQuery.getFrom().getId();
 
         if (query.contains("/edit_recipe")) {
             SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("Сотрите имя бота и отправьте отредактированный рецепт \uD83D\uDC47").build();
             telegramClient.execute(sendMessage);
 
-            BotStateContext botStateContext = botStateContextDAO.findBotStateContextByUserName(inlineQuery.getFrom().getUserName());
+            BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(inlineQuery.getFrom().getId());
             botStateContext.setCurrentBotState(BotState.WAITING_FOR_EDITED_RECIPE);
             botStateContextDAO.saveBotStateContext(botStateContext);
             return null;

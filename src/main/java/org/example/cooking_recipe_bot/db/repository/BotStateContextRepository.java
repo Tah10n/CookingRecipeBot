@@ -7,5 +7,4 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface BotStateContextRepository extends MongoRepository<BotStateContext, String> {
 
-    BotStateContext findByUserName(String userName);
 }

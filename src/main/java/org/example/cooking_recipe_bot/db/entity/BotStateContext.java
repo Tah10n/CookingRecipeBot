@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection = "bot_state_contexts")
 public class BotStateContext {
     @Id
-    private String userName;
+    private String id;
     private BotState currentBotState;
     private String additionalData;
 

@@ -7,39 +7,48 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class BotStateContextDAO {
-    private BotStateContextRepository botStateContextRepository;
+    private final BotStateContextRepository botStateContextRepository;
 
     public BotStateContextDAO(BotStateContextRepository botStateContextRepository) {
         this.botStateContextRepository = botStateContextRepository;
     }
 
-    public BotStateContext saveBotStateContext(BotStateContext botStateContext) {
-        return botStateContextRepository.save(botStateContext);
+    public void saveBotStateContext(BotStateContext botStateContext) {
+        botStateContextRepository.save(botStateContext);
     }
 
     public void deleteBotStateContext(BotStateContext botStateContext) {
         botStateContextRepository.delete(botStateContext);
     }
 
-    public BotStateContext findBotStateContextByUserName(String userName) {
-        return botStateContextRepository.findByUserName(userName);
+    public BotStateContext findBotStateContextById(Long id) {
+        return botStateContextRepository.findById(String.valueOf(id)).orElse(null);
     }
 
-    public void updateBotStateContext(BotStateContext botStateContext) {
-        botStateContextRepository.save(botStateContext);
-    }
-
-
-    public void changeBotState(String userName, BotState botState, String additionalData) {
-        BotStateContext botStateContext = findBotStateContextByUserName(userName);
+    public void changeBotState(Long userId, BotState botState, String additionalData) {
+        BotStateContext botStateContext = findBotStateContextById(userId);
+        if(botStateContext == null) {
+            botStateContext = new BotStateContext();
+            botStateContext.setId(String.valueOf(userId));
+            botStateContext.setCurrentBotState(BotState.DEFAULT);
+            saveBotStateContext(botStateContext);
+            return;
+        }
         botStateContext.setAdditionalData(additionalData);
         botStateContext.setCurrentBotState(botState);
         saveBotStateContext(botStateContext);
     }
 
 
-    public void changeBotState(String userName, BotState botState) {
-        BotStateContext botStateContext = findBotStateContextByUserName(userName);
+    public void changeBotState(Long userId, BotState botState) {
+        BotStateContext botStateContext = findBotStateContextById(userId);
+        if(botStateContext == null) {
+            botStateContext = new BotStateContext();
+            botStateContext.setId(String.valueOf(userId));
+            botStateContext.setCurrentBotState(BotState.DEFAULT);
+            saveBotStateContext(botStateContext);
+            return;
+        }
         botStateContext.setCurrentBotState(botState);
         saveBotStateContext(botStateContext);
     }

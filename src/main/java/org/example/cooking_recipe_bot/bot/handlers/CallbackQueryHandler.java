@@ -3,17 +3,13 @@ package org.example.cooking_recipe_bot.bot.handlers;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
-import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
-import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.UserParser;
 import org.example.cooking_recipe_bot.utils.constants.BotMessageEnum;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
@@ -25,11 +21,8 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCa
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
-import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.message.MaybeInaccessibleMessage;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ForceReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
@@ -39,7 +32,6 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 public class CallbackQueryHandler implements UpdateHandler {
     private final UserDAO userDAO;
     InlineKeyboardMaker inlineKeyboardMaker;
-    ReplyKeyboardMaker replyKeyboardMaker;
     TelegramClient telegramClient;
     RecipeDAO recipeDAO;
     BotStateContextDAO botStateContextDAO;
@@ -54,17 +46,18 @@ public class CallbackQueryHandler implements UpdateHandler {
     }
 
     @Override
-    public BotApiMethod handle(Update update) throws TelegramApiException {
+    public BotApiMethod<?> handle(Update update) throws TelegramApiException {
         final CallbackQuery callbackQuery = update.getCallbackQuery();
 
         String data = callbackQuery.getData().substring(0, callbackQuery.getData().indexOf(":"));
         long chatId = callbackQuery.getMessage().getChatId();
         int messageId = callbackQuery.getMessage().getMessageId();
-        Long userId = update.getCallbackQuery().getFrom().getId();
+        long userId = update.getCallbackQuery().getFrom().getId();
+        long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
         SendMessage sendMessage;
         switch (data) {
             case ("delete_user_button"):
-                long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
+
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " удален").build();
                 DeleteMessage deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
                 telegramClient.execute(sendMessage);
@@ -72,7 +65,6 @@ public class CallbackQueryHandler implements UpdateHandler {
                 userDAO.deleteUser(userIdFromMessage);
                 break;
             case ("set_admin_button"):
-                userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
                 userDAO.setAdmin(userIdFromMessage);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " стал администратором").build();
                 telegramClient.execute(sendMessage);
@@ -159,21 +151,21 @@ public class CallbackQueryHandler implements UpdateHandler {
                 }
                 break;
             case ("change_photo_button"):
-                String userName = update.getCallbackQuery().getFrom().getUserName();
+                userId = update.getCallbackQuery().getFrom().getId();
                 recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое фото или напишите delete если хотите удалить фото").build();
                 telegramClient.execute(sendMessage);
 
-                botStateContextDAO.changeBotState(userName, BotState.WAITING_FOR_PHOTO, recipeId);
+                botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_PHOTO, recipeId);
 
                 break;
             case ("change_video_button"):
-                userName = update.getCallbackQuery().getFrom().getUserName();
+                userId = update.getCallbackQuery().getFrom().getId();
                 recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое видео или напишите delete если хотите удалить видео").build();
                 telegramClient.execute(sendMessage);
 
-                botStateContextDAO.changeBotState(userName, BotState.WAITING_FOR_VIDEO, recipeId);
+                botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_VIDEO, recipeId);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + data);
@@ -197,10 +189,6 @@ public class CallbackQueryHandler implements UpdateHandler {
         } else {
             return inlineKeyboardMaker.getRecipeKeyboard(recipe, state);
         }
-    }
-
-    private void setCaptionMessage(EditMessageCaption editMessageCaption, Recipe recipe, int state, long userId) {
-
     }
 
 }
