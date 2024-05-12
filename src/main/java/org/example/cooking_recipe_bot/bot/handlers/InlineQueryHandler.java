@@ -20,7 +20,9 @@ import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessageconten
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResult;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultDocument;
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedGif;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedPhoto;
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedVideo;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
@@ -100,6 +102,26 @@ public class InlineQueryHandler implements UpdateHandler {
             if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
                 InlineQueryResultCachedPhoto result = InlineQueryResultCachedPhoto.builder()
                         .id(recipe.getId()).title(recipe.getName()).photoFileId(recipe.getPhotoId()).build();
+                if(recipe.toString().length() < 1024) {
+                    result.setCaption(recipe.toString());
+                } else {
+                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
+                }
+
+                inlineQueryResults.add(result);
+            } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
+                InlineQueryResultCachedVideo result = InlineQueryResultCachedVideo.builder()
+                        .id(recipe.getId()).title(recipe.getName()).videoFileId(recipe.getVideoId()).build();
+                if(recipe.toString().length() < 1024) {
+                    result.setCaption(recipe.toString());
+                } else {
+                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
+                }
+
+                inlineQueryResults.add(result);
+            } else if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
+                InlineQueryResultCachedGif result = InlineQueryResultCachedGif.builder()
+                        .id(recipe.getId()).title(recipe.getName()).gifFileId(recipe.getAnimationId()).build();
                 if(recipe.toString().length() < 1024) {
                     result.setCaption(recipe.toString());
                 } else {

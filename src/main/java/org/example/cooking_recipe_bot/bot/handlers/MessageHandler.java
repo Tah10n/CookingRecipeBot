@@ -71,6 +71,7 @@ public class MessageHandler implements UpdateHandler {
 //todo refactor to new class
         Map<String, Runnable> buttonActions = new HashMap<>();
         buttonActions.put("/start", getStartAction(update, user));
+        buttonActions.put("/cancel", getCancelAction(update, user));
         buttonActions.put(ButtonNameEnum.HELP_BUTTON.getButtonName().toLowerCase(), getHelpAction(update, user));
         buttonActions.put(ButtonNameEnum.FIND_RANDOM_RECIPE_BUTTON.getButtonName().toLowerCase(), getFindRandomRecipeAction(update));
         buttonActions.put(ButtonNameEnum.ADD_RECIPE_BUTTON.getButtonName().toLowerCase(), getAddRecipeAction(update));
@@ -136,6 +137,19 @@ public class MessageHandler implements UpdateHandler {
         }
 
         return sendMessage;
+    }
+
+    private Runnable getCancelAction(Update update, User user) {
+        return () -> {
+            botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
+            long chatId = update.getMessage().getChatId();
+            try {
+                telegramClient.execute(SendMessage.builder().chatId(chatId).text(BotMessageEnum.CANCEL_MESSAGE.getMessage()).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
+            } catch (TelegramApiException e) {
+                log.error(e.getMessage());
+                e.printStackTrace();
+            }
+        };
     }
 
     private SendMessage sendNotificationToUsers(Update update, User user) {

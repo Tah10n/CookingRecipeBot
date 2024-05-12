@@ -22,7 +22,7 @@ public class RecipeParser {
             throw new ParseException("Recipe string is empty", 0);
         }
         Recipe recipe = new Recipe();
-        String name = lines[0].trim().toLowerCase();
+        String name = lines[0].trim().toLowerCase().replaceAll("[.]", "");
         if(name.length() > 100) {
             throw new ParseException("Recipe name is too long", recipeString.lastIndexOf(name));
         }
@@ -39,7 +39,8 @@ public class RecipeParser {
             }
         }
         if(ingredientsBuilder.length() == 0) {
-            throw new ParseException("Recipe string has no ingredients", recipeString.lastIndexOf(name));
+            log.info("where is no ingredients in added recipe");
+            //throw new ParseException("Recipe string has no ingredients", recipeString.lastIndexOf(name));
         }
         recipe.setIngredients(ingredientsBuilder.toString().trim().toLowerCase());
 
@@ -52,6 +53,7 @@ public class RecipeParser {
             instructionsBuilder.append(instruction).append("\n");
         }
         if(instructionsBuilder.length() == 0) {
+            log.info("where is no instructions in added recipe");
             throw new ParseException("Recipe string has no instructions", recipeString.lastIndexOf(name));
         }
 

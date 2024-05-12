@@ -23,7 +23,9 @@ public enum BotMessageEnum {
     RECIPE_PARSING_ERROR("Не удалось распарсить рецепт. Проверьте соответствие рецепта шаблону"),
     RECIPE_ALREADY_EXISTS("Рецепт с таким названием уже существует. Добавьте другой"),
     RECIPE_SAVING_ERROR("Не удалось сохранить рецепт"),
-    RECIPE_SENDING_ERROR("Не удалось отправить рецепт"), INSERT_NOTIFICATION_MESSAGE("Отправьте текст уведомления");
+    RECIPE_SENDING_ERROR("Не удалось отправить рецепт"),
+    INSERT_NOTIFICATION_MESSAGE("Отправьте текст уведомления или напишите /cancel для отмены"),
+    CANCEL_MESSAGE("Действие отменено");
 
     private final String message;
 
