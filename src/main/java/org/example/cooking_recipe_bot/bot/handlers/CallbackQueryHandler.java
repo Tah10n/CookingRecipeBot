@@ -9,7 +9,7 @@ import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.UserParser;
-import org.example.cooking_recipe_bot.utils.constants.BotMessageEnum;
+import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
@@ -69,7 +69,8 @@ public class CallbackQueryHandler implements UpdateHandler {
                 userDAO.setAdmin(userIdFromMessage);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " стал администратором").build();
                 telegramClient.execute(sendMessage);
-                EditMessageText editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userIdFromMessage).toString()).replyMarkup(inlineKeyboardMaker.getUserAdminKeyboard(userIdFromMessage)).build();
+                EditMessageText editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId)
+                        .text(userDAO.getUserById(userIdFromMessage).toString()).replyMarkup(inlineKeyboardMaker.getUserKeyboard(userIdFromMessage, true)).build();
                 telegramClient.execute(editMessageText);
                 break;
             case ("unset_admin_button"):
@@ -77,7 +78,8 @@ public class CallbackQueryHandler implements UpdateHandler {
                 userDAO.unsetAdmin(userIdFromMessage);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " больше не администратор").build();
                 telegramClient.execute(sendMessage);
-                editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId).text(userDAO.getUserById(userIdFromMessage).toString()).replyMarkup(inlineKeyboardMaker.getUserKeyboard(userIdFromMessage)).build();
+                editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId)
+                        .text(userDAO.getUserById(userIdFromMessage).toString()).replyMarkup(inlineKeyboardMaker.getUserKeyboard(userIdFromMessage, false)).build();
                 telegramClient.execute(editMessageText);
                 break;
             case ("delete_recipe_button"):
@@ -185,11 +187,9 @@ public class CallbackQueryHandler implements UpdateHandler {
     }
 
     private InlineKeyboardMarkup getReplyMarkup(Recipe recipe, int state, long userId) {
-        if (userDAO.getUserById(userId).getIsAdmin()) {
-            return inlineKeyboardMaker.getRecipeAdminKeyboard(recipe, state);
-        } else {
-            return inlineKeyboardMaker.getRecipeKeyboard(recipe, state);
-        }
+        User user = userDAO.getUserById(userId);
+            return inlineKeyboardMaker.getRecipeKeyboard(recipe, state, user.getIsAdmin());
+
     }
 
 }

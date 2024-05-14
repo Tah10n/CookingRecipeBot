@@ -15,6 +15,7 @@ public class Recipe {
     private String description;
     private String ingredients;
     private String instructions;
+    private String thumbnailId;
     private String photoId;
     private String animationId;
     private String videoId;

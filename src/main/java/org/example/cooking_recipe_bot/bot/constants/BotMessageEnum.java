@@ -1,4 +1,4 @@
-package org.example.cooking_recipe_bot.utils.constants;
+package org.example.cooking_recipe_bot.bot.constants;
 
 public enum BotMessageEnum {
     HELP_MESSAGE("\uD83D\uDC4B я бот для поиска рецептов\n\n" +
@@ -25,7 +25,8 @@ public enum BotMessageEnum {
     RECIPE_SAVING_ERROR("Не удалось сохранить рецепт"),
     RECIPE_SENDING_ERROR("Не удалось отправить рецепт"),
     INSERT_NOTIFICATION_MESSAGE("Отправьте текст уведомления или напишите /cancel для отмены"),
-    CANCEL_MESSAGE("Действие отменено");
+    CANCEL_MESSAGE("Действие отменено"),
+    USER_NOT_FOUND("Пользователь не найден ");
 
     private final String message;
 

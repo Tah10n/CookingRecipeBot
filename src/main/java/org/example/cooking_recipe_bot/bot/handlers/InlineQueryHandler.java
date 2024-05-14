@@ -1,8 +1,11 @@
 package org.example.cooking_recipe_bot.bot.handlers;
 
+import jakarta.servlet.MultipartConfigElement;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
+import org.example.cooking_recipe_bot.config.BotConfig;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
@@ -11,6 +14,7 @@ import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -20,9 +24,11 @@ import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessageconten
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResult;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultDocument;
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultPhoto;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedGif;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedPhoto;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedVideo;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
@@ -34,21 +40,25 @@ import java.util.Set;
 @Slf4j
 @Service
 public class InlineQueryHandler implements UpdateHandler {
+    private final MultipartConfigElement multipartConfigElement;
     UserDAO userDAO;
     InlineKeyboardMaker inlineKeyboardMaker;
     TelegramClient telegramClient;
     RecipeDAO recipeDAO;
     BotStateContextDAO botStateContextDAO;
+    BotConfig botConfig;
 
-    public InlineQueryHandler(UserDAO userDAO, InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO) {
+    public InlineQueryHandler(UserDAO userDAO, InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig, MultipartConfigElement multipartConfigElement) {
         this.userDAO = userDAO;
         this.inlineKeyboardMaker = inlineKeyboardMaker;
         this.telegramClient = telegramClient;
         this.recipeDAO = recipeDAO;
         this.botStateContextDAO = botStateContextDAO;
+        this.botConfig = botConfig;
+        this.multipartConfigElement = multipartConfigElement;
     }
 
-    public BotApiMethod<?> handle(Update update){
+    public BotApiMethod<?> handle(Update update) {
         InlineQuery inlineQuery = update.getInlineQuery();
         ChosenInlineQuery chosenInlineQuery = update.hasChosenInlineQuery() ? update.getChosenInlineQuery() : null;
         String query = inlineQuery.getQuery();
@@ -86,60 +96,72 @@ public class InlineQueryHandler implements UpdateHandler {
         return null;
     }
 
-    private Collection<? extends InlineQueryResult> getInlineQueryResultList(String query) {
+    private Collection<? extends InlineQueryResult> getInlineQueryResultList(String query) throws TelegramApiException {
         Set<InlineQueryResult> inlineQueryResults = new HashSet<>();
-        //todo: add pagination
+
         List<Recipe> recipes = recipeDAO.findRecipesByString(query);
 
         for (Recipe recipe : recipes) {
+
+            InlineQueryResultArticle article = InlineQueryResultArticle.builder()
+                    .id(recipe.getId()).title(recipe.getName())
+                    .inputMessageContent(InputTextMessageContent.builder()
+                            .messageText(recipe.toString())
+                            .build())
+                    .build();
+            if(recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
+                String thubnailUrl = getUrlFromFileId(recipe.getPhotoId());
+                article.setThumbnailUrl(thubnailUrl);
+            }
+            inlineQueryResults.add(article);
+
+
+//            if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
+//                InlineQueryResultCachedPhoto result = InlineQueryResultCachedPhoto.builder()
+//                        .id(recipe.getId()).title(recipe.getName()).photoFileId(recipe.getPhotoId()).build();
+//                if (recipe.toString().length() < 1024) {
+//                    result.setCaption(recipe.toString());
+//                } else {
+//                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
+//                }
+//
+//                inlineQueryResults.add(result);
+//
+//            } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
+//                InlineQueryResultCachedVideo result = InlineQueryResultCachedVideo.builder()
+//                        .id(recipe.getId()).title(recipe.getName()).videoFileId(recipe.getVideoId()).build();
+//                if(recipe.toString().length() < 1024) {
+//                    result.setCaption(recipe.toString());
+//                } else {
+//                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
+//                }
+//
+//                inlineQueryResults.add(result);
+//            } else if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
+//                InlineQueryResultCachedGif result = InlineQueryResultCachedGif.builder()
+//                        .id(recipe.getId()).title(recipe.getName()).gifFileId(recipe.getAnimationId()).build();
+//                if(recipe.toString().length() < 1024) {
+//                    result.setCaption(recipe.toString());
+//                } else {
+//                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
+//                }
+//
+//                inlineQueryResults.add(result);
+//            } else {
 //                InlineQueryResultArticle article = InlineQueryResultArticle.builder()
-//                        .id(String.valueOf(recipe.getId()))
-//                        .title(recipe.getName())
+//                        .id(recipe.getId()).title(recipe.getName())
 //                        .inputMessageContent(InputTextMessageContent.builder()
 //                                .messageText(recipe.toString())
 //                                .build())
 //                        .build();
-            if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
-                InlineQueryResultCachedPhoto result = InlineQueryResultCachedPhoto.builder()
-                        .id(recipe.getId()).title(recipe.getName()).photoFileId(recipe.getPhotoId()).build();
-                if(recipe.toString().length() < 1024) {
-                    result.setCaption(recipe.toString());
-                } else {
-                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
-                }
-
-                inlineQueryResults.add(result);
-            } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
-                InlineQueryResultCachedVideo result = InlineQueryResultCachedVideo.builder()
-                        .id(recipe.getId()).title(recipe.getName()).videoFileId(recipe.getVideoId()).build();
-                if(recipe.toString().length() < 1024) {
-                    result.setCaption(recipe.toString());
-                } else {
-                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
-                }
-
-                inlineQueryResults.add(result);
-            } else if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
-                InlineQueryResultCachedGif result = InlineQueryResultCachedGif.builder()
-                        .id(recipe.getId()).title(recipe.getName()).gifFileId(recipe.getAnimationId()).build();
-                if(recipe.toString().length() < 1024) {
-                    result.setCaption(recipe.toString());
-                } else {
-                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
-                }
-
-                inlineQueryResults.add(result);
-            } else {
-                InlineQueryResultArticle article = InlineQueryResultArticle.builder()
-                        .id(recipe.getId())
-                        .title(recipe.getName())
-                        .inputMessageContent(InputTextMessageContent.builder()
-                                .messageText(recipe.toString())
-                                .build())
-                        .build();
-                inlineQueryResults.add(article);
-            }
+//                inlineQueryResults.add(article);
+//            }
         }
         return inlineQueryResults.stream().toList();
+    }
+
+    @SneakyThrows
+    private String getUrlFromFileId(String photoId) {
+        return telegramClient.execute(GetFile.builder().fileId(photoId).build()).getFileUrl(botConfig.getBotToken());
     }
 }
