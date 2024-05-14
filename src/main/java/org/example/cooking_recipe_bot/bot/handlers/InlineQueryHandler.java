@@ -1,6 +1,7 @@
 package org.example.cooking_recipe_bot.bot.handlers;
 
 import jakarta.servlet.MultipartConfigElement;
+import java.util.Arrays;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
@@ -11,24 +12,16 @@ import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
-import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.inlinequery.ChosenInlineQuery;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessagecontent.InputTextMessageContent;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResult;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle;
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultDocument;
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultPhoto;
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedGif;
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedPhoto;
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedVideo;
-import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
@@ -40,7 +33,6 @@ import java.util.Set;
 @Slf4j
 @Service
 public class InlineQueryHandler implements UpdateHandler {
-    private final MultipartConfigElement multipartConfigElement;
     UserDAO userDAO;
     InlineKeyboardMaker inlineKeyboardMaker;
     TelegramClient telegramClient;
@@ -48,19 +40,17 @@ public class InlineQueryHandler implements UpdateHandler {
     BotStateContextDAO botStateContextDAO;
     BotConfig botConfig;
 
-    public InlineQueryHandler(UserDAO userDAO, InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig, MultipartConfigElement multipartConfigElement) {
+    public InlineQueryHandler(UserDAO userDAO, InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig) {
         this.userDAO = userDAO;
         this.inlineKeyboardMaker = inlineKeyboardMaker;
         this.telegramClient = telegramClient;
         this.recipeDAO = recipeDAO;
         this.botStateContextDAO = botStateContextDAO;
         this.botConfig = botConfig;
-        this.multipartConfigElement = multipartConfigElement;
     }
 
     public BotApiMethod<?> handle(Update update) {
         InlineQuery inlineQuery = update.getInlineQuery();
-        ChosenInlineQuery chosenInlineQuery = update.hasChosenInlineQuery() ? update.getChosenInlineQuery() : null;
         String query = inlineQuery.getQuery();
         long chatId = inlineQuery.getFrom().getId();
         BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(inlineQuery.getFrom().getId());
@@ -73,22 +63,17 @@ public class InlineQueryHandler implements UpdateHandler {
                 log.error(e.getMessage());
                 e.printStackTrace();
             }
-
-
             botStateContext.setCurrentBotState(BotState.WAITING_FOR_EDITED_RECIPE);
             botStateContextDAO.saveBotStateContext(botStateContext);
             return null;
         } else {
             try {
                 Collection<? extends InlineQueryResult> inlineQueryResultList = getInlineQueryResultList(query);
-//                log.info(query);
-//                log.info(inlineQueryResultList.toString());
                 String id = inlineQuery.getId();
-//                log.info(id);
                 telegramClient.execute(AnswerInlineQuery.builder().inlineQueryId(id).results(inlineQueryResultList).build());
             } catch (TelegramApiException e) {
-                e.printStackTrace();
                 log.error(e.getMessage());
+                log.error(Arrays.toString(e.getStackTrace()));
 
             }
         }
@@ -96,7 +81,7 @@ public class InlineQueryHandler implements UpdateHandler {
         return null;
     }
 
-    private Collection<? extends InlineQueryResult> getInlineQueryResultList(String query) throws TelegramApiException {
+    private Collection<? extends InlineQueryResult> getInlineQueryResultList(String query) {
         Set<InlineQueryResult> inlineQueryResults = new HashSet<>();
 
         List<Recipe> recipes = recipeDAO.findRecipesByString(query);
@@ -109,9 +94,9 @@ public class InlineQueryHandler implements UpdateHandler {
                             .messageText(recipe.toString())
                             .build())
                     .build();
-            if(recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
-                String thubnailUrl = getUrlFromFileId(recipe.getPhotoId());
-                article.setThumbnailUrl(thubnailUrl);
+            if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
+                String thumbnailUrl = getUrlFromFileId(recipe.getPhotoId());
+                article.setThumbnailUrl(thumbnailUrl);
             }
             inlineQueryResults.add(article);
 

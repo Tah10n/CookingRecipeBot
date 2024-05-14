@@ -171,12 +171,13 @@ public class CallbackQueryHandler implements UpdateHandler {
                 botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_VIDEO, recipeId);
                 break;
             default:
-                throw new IllegalStateException("Unexpected value: " + data);
+                log.error(this.getClass().getName() + " Unexpected value in switch: " + data);
+                botStateContextDAO.changeBotState(userId, BotState.DEFAULT);
+                break;
         }
 
         return null;
     }
-
 
 
     private long getUserIdFromMessage(Message message) {
@@ -188,7 +189,7 @@ public class CallbackQueryHandler implements UpdateHandler {
 
     private InlineKeyboardMarkup getReplyMarkup(Recipe recipe, int state, long userId) {
         User user = userDAO.getUserById(userId);
-            return inlineKeyboardMaker.getRecipeKeyboard(recipe, state, user.getIsAdmin());
+        return inlineKeyboardMaker.getRecipeKeyboard(recipe, state, user.getIsAdmin());
 
     }
 

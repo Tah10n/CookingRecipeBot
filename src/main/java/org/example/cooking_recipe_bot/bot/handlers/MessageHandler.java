@@ -1,15 +1,15 @@
 package org.example.cooking_recipe_bot.bot.handlers;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.ActionFactory;
-import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
-import org.example.cooking_recipe_bot.db.entity.BotStateContext;
+import org.example.cooking_recipe_bot.bot.BotState;
+import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
-import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
+import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
+import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.RecipeParser;
@@ -30,7 +30,6 @@ import java.util.Map;
 
 @Slf4j
 @Service
-
 public class MessageHandler implements UpdateHandler {
     private final RecipeDAO recipeDAO;
     ReplyKeyboardMaker replyKeyboardMaker;
@@ -53,13 +52,18 @@ public class MessageHandler implements UpdateHandler {
 
     @Override
     public SendMessage handle(Update update) {
+        if (!update.hasMessage()) {
+            log.error(this.getClass().getName() + " No message in update");
+            log.error(update.toString());
+            return null;
+        }
         Message message = update.getMessage();
         User user = getOrCreateUserFromUpdate(update);
         BotStateContext botStateContext = getOrCreateBotStateContext(user);
         long chatId = message.getChatId();
+        SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("").build();
 
         Map<String, Runnable> buttonActions = actionFactory.createButtonActions(update, user);
-        SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("").build();
 
         if (message.hasText()) {
             String inputText = message.getText().toLowerCase();
@@ -76,11 +80,9 @@ public class MessageHandler implements UpdateHandler {
                     case WAITING_FOR_EDITED_RECIPE:
                         return updateRecipe(update, sendMessage, user);
                     case WAITING_FOR_PHOTO:
-                        handleWaitingForPhotoState(sendMessage, inputText, user);
-                        break;
+                        return handleWaitingForPhotoState(sendMessage, inputText, user);
                     case WAITING_FOR_VIDEO:
-                        handleWaitingForVideoState(sendMessage, inputText, user);
-                        break;
+                        return handleWaitingForVideoState(sendMessage, inputText, user);
                     case WAITING_FOR_NOTIFICATION:
                         return sendNotificationToUsers(update, user);
                 }
@@ -102,7 +104,7 @@ public class MessageHandler implements UpdateHandler {
         }
     }
 
-    private void handleWaitingForPhotoState(SendMessage sendMessage, String inputText, User user) {
+    private SendMessage handleWaitingForPhotoState(SendMessage sendMessage, String inputText, User user) {
         if ("delete".equals(inputText)) {
             String recipeId = botStateContextDAO.findBotStateContextById(user.getId()).getAdditionalData();
             Recipe recipe = recipeDAO.findRecipeById(recipeId);
@@ -110,10 +112,13 @@ public class MessageHandler implements UpdateHandler {
             recipeDAO.saveRecipe(recipe);
             sendMessage.setText("Фото удалено");
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
+        } else {
+            sendMessage.setText("Отправьте фото или напишите delete для его удаления");
         }
+        return sendMessage;
     }
 
-    private void handleWaitingForVideoState(SendMessage sendMessage, String inputText, User user) {
+    private SendMessage handleWaitingForVideoState(SendMessage sendMessage, String inputText, User user) {
         if ("delete".equals(inputText)) {
             String recipeId = botStateContextDAO.findBotStateContextById(user.getId()).getAdditionalData();
             Recipe recipe = recipeDAO.findRecipeById(recipeId);
@@ -122,7 +127,10 @@ public class MessageHandler implements UpdateHandler {
             recipeDAO.saveRecipe(recipe);
             sendMessage.setText("Видео удалено");
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
+        } else {
+            sendMessage.setText("Отправьте видео или напишите delete для его удаления");
         }
+        return sendMessage;
     }
 
     private SendMessage handleNoTextState(BotStateContext botStateContext, SendMessage sendMessage, Update update, User user) {
@@ -137,7 +145,7 @@ public class MessageHandler implements UpdateHandler {
             case WAITING_FOR_VIDEO:
                 return addVideo(update, sendMessage, user);
             default:
-                log.debug(this.getClass().getName() + "swith default: botStateContext=" + botStateContext.getCurrentBotState());
+                log.debug(this.getClass().getName() + "switch default: botStateContext=" + botStateContext.getCurrentBotState());
                 break;
         }
         return sendMessage;
@@ -166,10 +174,12 @@ public class MessageHandler implements UpdateHandler {
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
                 log.error(Arrays.toString(e.getStackTrace()));
+            } finally {
+                botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             }
         }
-        botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
-        return SendMessage.builder().chatId(update.getMessage().getChatId()).text("Уведомления отправлены").build();
+
+        return SendMessage.builder().chatId(update.getMessage().getChatId()).text("Уведомление отправлено всем пользователям").build();
     }
 
 
@@ -197,11 +207,12 @@ public class MessageHandler implements UpdateHandler {
 
     private SendMessage updateRecipe(Update update, SendMessage sendMessage, User user) {
         Recipe recipe;
+
         String inputText = update.getMessage().getText();
         String[] split = inputText.split("//");
-        if(split.length != 3) {
+        if (split.length != 3) {
             sendMessage.setText("Неверный формат: не стирайте служебную строку /edit_recipe//...//");
-            log.debug(this.getClass().getName() + "split.length=" + split.length);
+            log.debug(this.getClass().getName() + " split.length=" + split.length);
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             return sendMessage;
         }
@@ -226,9 +237,10 @@ public class MessageHandler implements UpdateHandler {
         } catch (TelegramApiException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
+        } finally {
+            botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         }
 
-        botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
     }
 
@@ -253,12 +265,6 @@ public class MessageHandler implements UpdateHandler {
     }
 
     private SendMessage addNewRecipe(Update update, SendMessage sendMessage, User user) {
-        if (!update.hasMessage()) {
-
-            botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
-            log.error("No message in update");
-            return sendMessage;
-        }
 
         Recipe recipe;
         try {
@@ -275,13 +281,13 @@ public class MessageHandler implements UpdateHandler {
         if (checkIsRecipeAlreadyExists(recipe)) {
             sendMessage.setText(BotMessageEnum.RECIPE_ALREADY_EXISTS.getMessage());
         } else {
-            String fileId = update.getMessage().hasPhoto() ? update.getMessage().getPhoto().stream()
-                    .max(Comparator.comparing(PhotoSize::getFileSize))
-                    .map(PhotoSize::getFileId)
-                    .orElse("") : null;
-            recipe.setPhotoId(fileId);
 
-            if (update.getMessage().hasAnimation()) {
+            if (update.getMessage().hasPhoto()) {
+                String photoId = update.getMessage().getPhoto().stream()
+                        .max(Comparator.comparing(PhotoSize::getFileSize))
+                        .map(PhotoSize::getFileId).orElse(null);
+                recipe.setPhotoId(photoId);
+            } else if (update.getMessage().hasAnimation()) {
                 String animationId = update.getMessage().getAnimation().getFileId();
                 recipe.setAnimationId(animationId);
             } else if (update.getMessage().hasVideo()) {
@@ -298,10 +304,11 @@ public class MessageHandler implements UpdateHandler {
                 log.error(e.getMessage());
                 log.error(Arrays.toString(e.getStackTrace()));
                 sendMessage.setText(BotMessageEnum.RECIPE_SENDING_ERROR.getMessage());
+            } finally {
+                botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             }
         }
 
-        botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
     }
 
