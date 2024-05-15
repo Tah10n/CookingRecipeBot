@@ -32,7 +32,13 @@ public class InlineKeyboardMaker {
 
     public InlineKeyboardMarkup getRecipeKeyboard(Recipe recipe, int isOpened, boolean isAdmin) {
         if(isAdmin) {
-            InlineKeyboardButton openButton = InlineKeyboardButton.builder().text(recipe.getName().toUpperCase()).callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
+            InlineKeyboardButton openButton;
+            if(isOpened == 0) {
+                openButton = InlineKeyboardButton.builder().text("открыть").callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
+            } else {
+                openButton = InlineKeyboardButton.builder().text("закрыть").callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
+            }
+
 
             InlineKeyboardButton deleteButton = InlineKeyboardButton.builder().text("Удалить рецепт").callbackData("delete_recipe_button:" + recipe.getId()).build();
             InlineKeyboardButton changePhotoButton = InlineKeyboardButton.builder().text("Изменить фото").callbackData("change_photo_button:" + recipe.getId()).build();
@@ -48,8 +54,12 @@ public class InlineKeyboardMaker {
 
             return inlineKeyboardMarkup;
         } else {
-            InlineKeyboardButton openButton = InlineKeyboardButton.builder().text(recipe.getName().toUpperCase()).callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
-
+            InlineKeyboardButton openButton;
+            if(isOpened == 0) {
+                openButton = InlineKeyboardButton.builder().text("открыть").callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
+            } else {
+                openButton = InlineKeyboardButton.builder().text("закрыть").callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
+            }
             InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
                     .keyboardRow(new InlineKeyboardRow(openButton)).build();
 

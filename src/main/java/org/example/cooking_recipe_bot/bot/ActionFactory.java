@@ -12,6 +12,7 @@ import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
@@ -98,6 +99,7 @@ public class ActionFactory {
         };
     }
 
+    //TODO: additional check for user isAdmin?
     private @NotNull Runnable getAddRecipeAction(Update update) {
         return () -> {
             Long chatId = update.getMessage().getChatId();
@@ -187,7 +189,7 @@ public class ActionFactory {
         User user = userDAO.findById(userId).orElseThrow(() -> new TelegramApiException(BotMessageEnum.USER_NOT_FOUND.getMessage() + userId));
 
         if (recipes.isEmpty()) {
-            sendMessage(update, BotMessageEnum.RECIPE_NOT_FOUND.getMessage());
+            sendTextMessage(update, BotMessageEnum.RECIPE_NOT_FOUND.getMessage());
             return;
         }
 
@@ -196,16 +198,31 @@ public class ActionFactory {
         }
     }
 
-    private void sendRecipe(Update update, Recipe recipe, User user) {
-        if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
-            sendAnimation(update, recipe, user);
-        } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
-            sendVideo(update, recipe, user);
-        } else if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
-            sendPhoto(update, recipe, user);
-        } else {
-            sendMessage(update, "Рецепт:");
+    private void sendTextMessage(Update update, String message) {
+        SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(message).build();
+        try {
+            telegramClient.execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
         }
+    }
+
+    private void sendRecipe(Update update, Recipe recipe, User user) {
+        if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
+            SendPhoto sendPhoto = SendPhoto.builder()
+                    .chatId(update.getMessage().getChatId())
+                    .photo(new InputFile(recipe.getPhotoId()))
+                    .build();
+            try {
+                telegramClient.execute(sendPhoto);
+            } catch (TelegramApiException e) {
+                log.error(e.getMessage());
+                log.error(Arrays.toString(e.getStackTrace()));
+            }
+        }
+            sendTextRecipe(update, recipe, user);
+
     }
 
     private void sendAnimation(Update update, Recipe recipe, User user) {
@@ -263,11 +280,12 @@ public class ActionFactory {
                 .build();
     }
 
-    private void sendMessage(Update update, String message) {
+    private void sendTextRecipe(Update update, Recipe recipe, User user) {
         SendMessage sendMessage = SendMessage.builder()
                 .chatId(update.getMessage().getChatId())
-                .text(message)
+                .text("*" + recipe.getName().toUpperCase() + "*").parseMode(ParseMode.MARKDOWN)
                 .build();
+        sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0, user.getIsAdmin()));
         try {
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {

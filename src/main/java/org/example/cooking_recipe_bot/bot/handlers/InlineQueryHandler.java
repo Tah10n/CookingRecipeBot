@@ -15,6 +15,7 @@ import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
+import org.telegram.telegrambots.meta.api.methods.GetMe;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -100,47 +101,6 @@ public class InlineQueryHandler implements UpdateHandler {
             }
             inlineQueryResults.add(article);
 
-
-//            if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
-//                InlineQueryResultCachedPhoto result = InlineQueryResultCachedPhoto.builder()
-//                        .id(recipe.getId()).title(recipe.getName()).photoFileId(recipe.getPhotoId()).build();
-//                if (recipe.toString().length() < 1024) {
-//                    result.setCaption(recipe.toString());
-//                } else {
-//                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
-//                }
-//
-//                inlineQueryResults.add(result);
-//
-//            } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
-//                InlineQueryResultCachedVideo result = InlineQueryResultCachedVideo.builder()
-//                        .id(recipe.getId()).title(recipe.getName()).videoFileId(recipe.getVideoId()).build();
-//                if(recipe.toString().length() < 1024) {
-//                    result.setCaption(recipe.toString());
-//                } else {
-//                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
-//                }
-//
-//                inlineQueryResults.add(result);
-//            } else if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
-//                InlineQueryResultCachedGif result = InlineQueryResultCachedGif.builder()
-//                        .id(recipe.getId()).title(recipe.getName()).gifFileId(recipe.getAnimationId()).build();
-//                if(recipe.toString().length() < 1024) {
-//                    result.setCaption(recipe.toString());
-//                } else {
-//                    result.setInputMessageContent(InputTextMessageContent.builder().messageText(recipe.toString()).build());
-//                }
-//
-//                inlineQueryResults.add(result);
-//            } else {
-//                InlineQueryResultArticle article = InlineQueryResultArticle.builder()
-//                        .id(recipe.getId()).title(recipe.getName())
-//                        .inputMessageContent(InputTextMessageContent.builder()
-//                                .messageText(recipe.toString())
-//                                .build())
-//                        .build();
-//                inlineQueryResults.add(article);
-//            }
         }
         return inlineQueryResults.stream().toList();
     }

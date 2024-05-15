@@ -59,6 +59,11 @@ public class MessageHandler implements UpdateHandler {
         }
         Message message = update.getMessage();
         User user = getOrCreateUserFromUpdate(update);
+        if(user == null) {
+            log.error(this.getClass().getName() + " No user in update");
+            log.error(update.toString());
+            return null;
+        }
         BotStateContext botStateContext = getOrCreateBotStateContext(user);
         long chatId = message.getChatId();
         SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("").build();
@@ -320,6 +325,9 @@ public class MessageHandler implements UpdateHandler {
 
 
     private User getOrCreateUserFromUpdate(Update update) {
+        if (update.getMessage() == null) {
+            return null;
+        }
         Long userId = update.getMessage().getFrom().getId();
         if (userDAO.findById(userId).isPresent()) {
             return userDAO.findById(userId).get();

@@ -2,6 +2,7 @@ package org.example.cooking_recipe_bot.bot.handlers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
+import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
@@ -9,19 +10,21 @@ import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.UserParser;
-import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageMedia;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaAnimation;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaVideo;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -48,7 +51,11 @@ public class CallbackQueryHandler implements UpdateHandler {
     @Override
     public BotApiMethod<?> handle(Update update) throws TelegramApiException {
         final CallbackQuery callbackQuery = update.getCallbackQuery();
-
+        if (callbackQuery == null) {
+            log.error(this.getClass().getName() + " No callback query in update");
+            log.error(update.toString());
+            return null;
+        }
         String data = callbackQuery.getData().substring(0, callbackQuery.getData().indexOf(":"));
         long chatId = callbackQuery.getMessage().getChatId();
         int messageId = callbackQuery.getMessage().getMessageId();
@@ -98,60 +105,62 @@ public class CallbackQueryHandler implements UpdateHandler {
                 if (recipe == null) {
                     return SendMessage.builder().chatId(chatId).text(BotMessageEnum.RECIPE_NOT_FOUND.getMessage()).build();
                 }
-                Message message = (Message) callbackQuery.getMessage();
 
                 EditMessageText editMessageTextFromOpenButton = null;
-                if (message.hasText()) {
-                    if (opened == 0) {
-                        editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString()).build();
-                        editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
-                    } else if (opened == 1) {
-                        editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text("Рецепт:").build();
-                        editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 0, userId));
-                        if (recipe.getVideoId() != null || recipe.getAnimationId() != null || recipe.getPhotoId() != null) {
-                            deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                            telegramClient.execute(deleteMessage);
-                            EditMessageCaption editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId - 1).caption("").build();
-                            editMessageCaption.setReplyMarkup(getReplyMarkup(recipe, 0, userId));
-                            telegramClient.execute(editMessageCaption);
-                            break;
+                if (opened == 0) {
+                    if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
+                        if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
+                            EditMessageMedia editMessageMedia = EditMessageMedia.builder().chatId(chatId).messageId(messageId - 1)
+                                    .media(new InputMediaAnimation(recipe.getAnimationId())).build();
+                            telegramClient.execute(editMessageMedia);
+                        } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
+                            EditMessageMedia editMessageMedia = EditMessageMedia.builder().chatId(chatId).messageId(messageId - 1)
+                                    .media(new InputMediaVideo(recipe.getVideoId())).build();
+                            telegramClient.execute(editMessageMedia);
                         }
-                    }
-                    telegramClient.execute(editMessageTextFromOpenButton);
-                } else {
-                    EditMessageCaption editMessageCaption = EditMessageCaption.builder().chatId(chatId).messageId(messageId).caption("").build();
-                    if (opened == 0) {
-                        if (recipe.toString().length() > 1024) {
+                    } else {
+                        if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
                             deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
                             telegramClient.execute(deleteMessage);
-                            if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
-                                SendAnimation sendAnimation = SendAnimation.builder().chatId(chatId).animation(new InputFile(recipe.getAnimationId())).build();
-                                telegramClient.execute(sendAnimation);
-                            } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
-                                SendVideo sendVideo = SendVideo.builder().chatId(chatId).video(new InputFile(recipe.getVideoId())).build();
-                                telegramClient.execute(sendVideo);
-
-                            } else if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
-                                SendPhoto sendPhoto = SendPhoto.builder().chatId(chatId).photo(new InputFile(recipe.getPhotoId())).build();
-                                telegramClient.execute(sendPhoto);
-
-                            }
-                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).build();
-                            sendMessage.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
+                            SendAnimation sendAnimation = SendAnimation.builder().chatId(chatId)
+                                    .animation(new InputFile(recipe.getAnimationId())).build();
+                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
+                            telegramClient.execute(sendAnimation);
                             telegramClient.execute(sendMessage);
                             break;
+                        } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
+                            deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
+                            telegramClient.execute(deleteMessage);
+                            SendVideo sendVideo = SendVideo.builder().chatId(chatId)
+                                    .video(new InputFile(recipe.getVideoId())).build();
+                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
+                            telegramClient.execute(sendVideo);
+                            telegramClient.execute(sendMessage);
+                            break;
+                        }
+                    }
+                    editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString()).build();
+                    editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
+                } else if (opened == 1) {
+                    if ((recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) || (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty())) {
+                        if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
+                            EditMessageMedia editMessageMedia = EditMessageMedia.builder().chatId(chatId).messageId(messageId - 1)
+                                    .media(new InputMediaPhoto(recipe.getPhotoId())).build();
+
+                            telegramClient.execute(editMessageMedia);
                         } else {
-                            editMessageCaption.setCaption(recipe.toString());
-                            editMessageCaption.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
+                            deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId - 1).build();
+                            telegramClient.execute(deleteMessage);
                         }
 
-                    } else if (opened == 1) {
-                        editMessageCaption.setCaption("");
-                        editMessageCaption.setReplyMarkup(getReplyMarkup(recipe, 0, userId));
                     }
+                    editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId)
+                            .text("*" + recipe.getName().toUpperCase() + "*").parseMode(ParseMode.MARKDOWN).build();
+                    editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 0, userId));
 
-                    telegramClient.execute(editMessageCaption);
                 }
+                telegramClient.execute(editMessageTextFromOpenButton);
+
                 break;
             case ("change_photo_button"):
                 userId = update.getCallbackQuery().getFrom().getId();
