@@ -12,7 +12,9 @@ public enum ButtonNameEnum {
     USERS_BUTTON("Пользователи"),
     SEND_NOTIFICATION("Уведомление"),
     MORE_RECIPES("Еще рецепты"),
-    CANCEL("Отмена");
+    CANCEL("Отмена"),
+    YES("Да"),
+    NO("Нет");
 
     private final String buttonName;
 

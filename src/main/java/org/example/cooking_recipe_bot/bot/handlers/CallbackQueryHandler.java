@@ -97,12 +97,26 @@ public class CallbackQueryHandler implements UpdateHandler {
                 break;
             case ("delete_recipe_button"):
                 String recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
+                SendMessage questionMessage = SendMessage.builder().chatId(chatId)
+                        .text("Вы уверены, что хотите удалить рецепт " + recipeDAO.findRecipeById(recipeId).getName() + " ?")
+                        .replyMarkup(inlineKeyboardMaker.getYesOrNoForDeleteRecipeKeyboard(recipeId)).build();
+                telegramClient.execute(questionMessage);
+                break;
+            case ("yes_for_delete_recipe_button"):
+                recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
                 recipeDAO.deleteRecipe(recipeId);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Рецепт удален").build();
 
                 telegramClient.execute(sendMessage);
                 DeleteMessage deleteMessage1 = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
                 telegramClient.execute(deleteMessage1);
+                break;
+            case ("no_for_delete_recipe_button"):
+                sendMessage = SendMessage.builder().chatId(chatId).text("Рецепт не удален").build();
+
+                telegramClient.execute(sendMessage);
+                DeleteMessage deleteMessage2 = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
+                telegramClient.execute(deleteMessage2);
                 break;
             case ("open_recipe_button"):
                 int opened = Integer.parseInt(callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1, callbackQuery.getData().lastIndexOf(":")));

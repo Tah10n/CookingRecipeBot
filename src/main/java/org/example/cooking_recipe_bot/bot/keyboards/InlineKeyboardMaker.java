@@ -2,15 +2,11 @@ package org.example.cooking_recipe_bot.bot.keyboards;
 
 import org.example.cooking_recipe_bot.bot.constants.ButtonNameEnum;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
-import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.SwitchInlineQueryChosenChat;
-
-import java.util.List;
 
 @Component
 public class InlineKeyboardMaker {
@@ -78,6 +74,15 @@ public class InlineKeyboardMaker {
         InlineKeyboardButton cancelButton = InlineKeyboardButton.builder().text(ButtonNameEnum.CANCEL.getButtonName()).callbackData("cancel_button:").build();
         InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(cancelButton, moreRecipesButton)).build();
+
+        return inlineKeyboardMarkup;
+    }
+
+    public ReplyKeyboard getYesOrNoForDeleteRecipeKeyboard(String recipeId) {
+        InlineKeyboardButton yesButton = InlineKeyboardButton.builder().text(ButtonNameEnum.YES.getButtonName()).callbackData("yes_for_delete_recipe_button:" + recipeId).build();
+        InlineKeyboardButton noButton = InlineKeyboardButton.builder().text(ButtonNameEnum.NO.getButtonName()).callbackData("no_for_delete_recipe_button:" + recipeId).build();
+        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(yesButton, noButton)).build();
 
         return inlineKeyboardMarkup;
     }
