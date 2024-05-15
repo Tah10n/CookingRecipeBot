@@ -112,9 +112,6 @@ public class CallbackQueryHandler implements UpdateHandler {
                 telegramClient.execute(deleteMessage1);
                 break;
             case ("no_for_delete_recipe_button"):
-                sendMessage = SendMessage.builder().chatId(chatId).text("Рецепт не удален").build();
-
-                telegramClient.execute(sendMessage);
                 DeleteMessage deleteMessage2 = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
                 telegramClient.execute(deleteMessage2);
                 break;
