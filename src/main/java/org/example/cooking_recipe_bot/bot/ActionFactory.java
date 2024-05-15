@@ -75,6 +75,8 @@ public class ActionFactory {
 
     private @NotNull Runnable getSendNotificationAction(Update update) {
         return () -> {
+            if (checkUserIsNotAdmin(update)) return;
+
             Long chatId = update.getMessage().getChatId();
             SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(BotMessageEnum.INSERT_NOTIFICATION_MESSAGE.getMessage()).build();
             try {
@@ -88,8 +90,18 @@ public class ActionFactory {
         };
     }
 
+    private boolean checkUserIsNotAdmin(Update update) {
+        User user = userDAO.findById(update.getMessage().getFrom().getId()).orElse(null);
+        if(user == null || !user.getIsAdmin()) {
+            return true;
+        }
+        return false;
+    }
+
     private @NotNull Runnable getGetUsersAction(Update update) {
         return () -> {
+            if (checkUserIsNotAdmin(update)) return;
+
             try {
                 sendUsersList(update);
             } catch (TelegramApiException e) {
@@ -102,6 +114,8 @@ public class ActionFactory {
     //TODO: additional check for user isAdmin?
     private @NotNull Runnable getAddRecipeAction(Update update) {
         return () -> {
+            if (checkUserIsNotAdmin(update)) return;
+
             Long chatId = update.getMessage().getChatId();
             SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(BotMessageEnum.INSERT_RECIPE_MESSAGE.getMessage()).build();
             try {
