@@ -8,6 +8,7 @@ import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
+import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.jetbrains.annotations.NotNull;
@@ -92,7 +93,7 @@ public class ActionFactory {
 
     private boolean checkUserIsNotAdmin(Update update) {
         User user = userDAO.findById(update.getMessage().getFrom().getId()).orElse(null);
-        if(user == null || !user.getIsAdmin()) {
+        if (user == null || !user.getIsAdmin()) {
             return true;
         }
         return false;
@@ -137,7 +138,9 @@ public class ActionFactory {
             Recipe randomRecipe = recipeDAO.getRandomRecipe();
             if (randomRecipe != null) {
                 try {
-                    sendRecipesList(update, List.of(randomRecipe));
+                    Long userId = update.getMessage().getFrom().getId();
+                    Long chatId = update.getMessage().getChatId();
+                    sendRecipesList(userId, chatId, List.of(randomRecipe));
                 } catch (TelegramApiException e) {
                     log.error(e.getMessage());
                     log.error(Arrays.toString(e.getStackTrace()));
@@ -198,22 +201,49 @@ public class ActionFactory {
 
     }
 
-    public void sendRecipesList(Update update, List<Recipe> recipes) throws TelegramApiException {
-        Long userId = update.getMessage().getFrom().getId();
+    public void sendRecipesList(Long userId, Long chatId, List<Recipe> recipes) throws TelegramApiException {
         User user = userDAO.findById(userId).orElseThrow(() -> new TelegramApiException(BotMessageEnum.USER_NOT_FOUND.getMessage() + userId));
 
         if (recipes.isEmpty()) {
-            sendTextMessage(update, BotMessageEnum.RECIPE_NOT_FOUND.getMessage());
+            sendTextMessage(chatId, BotMessageEnum.RECIPE_NOT_FOUND.getMessage());
             return;
         }
 
-        for (Recipe recipe : recipes) {
-            sendRecipe(update, recipe, user);
+        if (recipes.size() > 4) {
+            for (int i = 0; i < 4; i++) {
+                sendRecipe(chatId, recipes.get(i), user);
+            }
+            sendMoreRecipesButton(chatId, user, recipes.subList(4, recipes.size()));
+        } else {
+            for (Recipe recipe : recipes) {
+                sendRecipe(chatId, recipe, user);
+            }
         }
+
     }
 
-    private void sendTextMessage(Update update, String message) {
-        SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(message).build();
+    private void sendMoreRecipesButton(Long chatId, User user, List<Recipe> recipes) {
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(chatId)
+                .text("Продолжить показывать рецепты? \n" +
+                        "(или отправьте новый запрос)")
+                .replyMarkup(inlineKeyboardMaker.getMoreRecipesKeyboard())
+                .build();
+        try {
+            telegramClient.execute(sendMessage);
+
+            BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(user.getId());
+            botStateContext.setRecipeList(recipes);
+            botStateContextDAO.saveBotStateContext(botStateContext);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+        }
+
+    }
+
+    private void sendTextMessage(Long chatId, String message) {
+        SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(message).build();
         try {
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
@@ -222,10 +252,10 @@ public class ActionFactory {
         }
     }
 
-    private void sendRecipe(Update update, Recipe recipe, User user) {
+    private void sendRecipe(Long chatId, Recipe recipe, User user) {
         if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
             SendPhoto sendPhoto = SendPhoto.builder()
-                    .chatId(update.getMessage().getChatId())
+                    .chatId(chatId)
                     .photo(new InputFile(recipe.getPhotoId()))
                     .build();
             try {
@@ -235,7 +265,7 @@ public class ActionFactory {
                 log.error(Arrays.toString(e.getStackTrace()));
             }
         }
-            sendTextRecipe(update, recipe, user);
+        sendTextRecipe(chatId, recipe, user);
 
     }
 
@@ -294,9 +324,9 @@ public class ActionFactory {
                 .build();
     }
 
-    private void sendTextRecipe(Update update, Recipe recipe, User user) {
+    private void sendTextRecipe(Long chatId, Recipe recipe, User user) {
         SendMessage sendMessage = SendMessage.builder()
-                .chatId(update.getMessage().getChatId())
+                .chatId(chatId)
                 .text("*" + recipe.getName().toUpperCase() + "*").parseMode(ParseMode.MARKDOWN)
                 .build();
         sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0, user.getIsAdmin()));

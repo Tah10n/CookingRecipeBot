@@ -5,6 +5,8 @@ import org.example.cooking_recipe_bot.bot.BotState;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
+
 @Data
 @Document(collection = "bot_state_contexts")
 public class BotStateContext {
@@ -12,6 +14,6 @@ public class BotStateContext {
     private String id;
     private BotState currentBotState;
     private String additionalData;
-
+    private List<Recipe> recipeList;
 
 }

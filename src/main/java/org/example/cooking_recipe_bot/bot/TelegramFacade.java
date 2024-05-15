@@ -48,7 +48,7 @@ public class TelegramFacade {
 
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
-            return SendMessage.builder().text(BotMessageEnum.EXCEPTION_WHAT_THE_FUCK.getMessage()).chatId(chatId).build();
+            return SendMessage.builder().text(BotMessageEnum.EXCEPTION_UPDATE_HANDLE.getMessage()).chatId(chatId).build();
         }
 
     }

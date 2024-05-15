@@ -10,7 +10,9 @@ public enum ButtonNameEnum {
     DELETE_RECIPE_BUTTON("Удалить рецепт"),
     FIND_RANDOM_RECIPE_BUTTON("Найти случайный рецепт"),
     USERS_BUTTON("Пользователи"),
-    SEND_NOTIFICATION("Уведомление");
+    SEND_NOTIFICATION("Уведомление"),
+    MORE_RECIPES("Еще рецепты"),
+    CANCEL("Отмена");
 
     private final String buttonName;
 

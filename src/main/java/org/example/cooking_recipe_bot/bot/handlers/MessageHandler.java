@@ -102,7 +102,9 @@ public class MessageHandler implements UpdateHandler {
     private void handleDefaultState(Update update, String inputText) {
         List<Recipe> recipes = recipeDAO.findRecipesByString(inputText);
         try {
-            actionFactory.sendRecipesList(update, recipes);
+            long userId = update.getMessage().getFrom().getId();
+            long chatId = update.getMessage().getChatId();
+            actionFactory.sendRecipesList(userId, chatId, recipes);
         } catch (TelegramApiException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
@@ -224,6 +226,8 @@ public class MessageHandler implements UpdateHandler {
         String recipeId = split[1];
         String recipeString = split[2];
         try {
+            Long userId = user.getId();
+            Long chatId = update.getMessage().getChatId();
             recipe = RecipeParser.parseRecipeFromString(recipeString);
             Recipe recipeToEdit = recipeDAO.findRecipeById(recipeId);
             recipeToEdit.setName(recipe.getName());
@@ -233,7 +237,7 @@ public class MessageHandler implements UpdateHandler {
 
             recipeDAO.updateRecipe(recipeToEdit);
             sendMessage.setText("Рецепт изменен");
-            actionFactory.sendRecipesList(update, List.of(recipeToEdit));
+            actionFactory.sendRecipesList(userId, chatId, List.of(recipeToEdit));
         } catch (ParseException e) {
             sendMessage.setText(BotMessageEnum.RECIPE_PARSING_ERROR.getMessage() + e.getMessage());
             log.error(e.getMessage());
@@ -303,7 +307,9 @@ public class MessageHandler implements UpdateHandler {
             Recipe savedRecipe = recipeDAO.saveRecipe(recipe);
 
             try {
-                actionFactory.sendRecipesList(update, List.of(savedRecipe));
+                Long userId = user.getId();
+                Long chatId = update.getMessage().getChatId();
+                actionFactory.sendRecipesList(userId, chatId, List.of(savedRecipe));
                 sendMessage.setText(BotMessageEnum.RECIPE_ADDED.getMessage());
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());

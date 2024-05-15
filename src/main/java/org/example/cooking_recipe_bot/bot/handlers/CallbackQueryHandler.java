@@ -1,12 +1,14 @@
 package org.example.cooking_recipe_bot.bot.handlers;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.cooking_recipe_bot.bot.ActionFactory;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
+import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.utils.UserParser;
@@ -30,22 +32,26 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.util.List;
+
 @Slf4j
 @Service
 public class CallbackQueryHandler implements UpdateHandler {
     private final UserDAO userDAO;
+    private final ActionFactory actionFactory;
     InlineKeyboardMaker inlineKeyboardMaker;
     TelegramClient telegramClient;
     RecipeDAO recipeDAO;
     BotStateContextDAO botStateContextDAO;
 
-    public CallbackQueryHandler(InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, UserDAO userDAO) {
+    public CallbackQueryHandler(InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, UserDAO userDAO, ActionFactory actionFactory) {
 
         this.inlineKeyboardMaker = inlineKeyboardMaker;
         this.telegramClient = telegramClient;
         this.recipeDAO = recipeDAO;
         this.botStateContextDAO = botStateContextDAO;
         this.userDAO = userDAO;
+        this.actionFactory = actionFactory;
     }
 
     @Override
@@ -178,6 +184,18 @@ public class CallbackQueryHandler implements UpdateHandler {
                 telegramClient.execute(sendMessage);
 
                 botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_VIDEO, recipeId);
+                break;
+            case ("more_recipes_button"):
+                BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(userId);
+                List<Recipe> recipes = botStateContext.getRecipeList();
+                deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
+                telegramClient.execute(deleteMessage);
+                actionFactory.sendRecipesList(userId, chatId, recipes);
+                break;
+            case ("cancel_button"):
+                deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
+                telegramClient.execute(deleteMessage);
+                botStateContextDAO.changeBotState(userId, BotState.DEFAULT);
                 break;
             default:
                 log.error(this.getClass().getName() + " Unexpected value in switch: " + data);

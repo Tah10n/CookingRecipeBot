@@ -1,11 +1,16 @@
 package org.example.cooking_recipe_bot.bot.keyboards;
 
+import org.example.cooking_recipe_bot.bot.constants.ButtonNameEnum;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
+import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.SwitchInlineQueryChosenChat;
+
+import java.util.List;
 
 @Component
 public class InlineKeyboardMaker {
@@ -68,4 +73,12 @@ public class InlineKeyboardMaker {
 
     }
 
+    public ReplyKeyboard getMoreRecipesKeyboard() {
+        InlineKeyboardButton moreRecipesButton = InlineKeyboardButton.builder().text(ButtonNameEnum.MORE_RECIPES.getButtonName()).callbackData("more_recipes_button:").build();
+        InlineKeyboardButton cancelButton = InlineKeyboardButton.builder().text(ButtonNameEnum.CANCEL.getButtonName()).callbackData("cancel_button:").build();
+        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(cancelButton, moreRecipesButton)).build();
+
+        return inlineKeyboardMarkup;
+    }
 }
