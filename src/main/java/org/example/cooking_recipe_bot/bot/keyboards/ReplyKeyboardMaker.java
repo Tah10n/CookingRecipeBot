@@ -19,7 +19,10 @@ public class ReplyKeyboardMaker {
                         KeyboardButton.builder().text(ButtonNameEnum.LUNCH_BUTTON.getButtonName()).build(),
                         KeyboardButton.builder().text(ButtonNameEnum.DINNER_BUTTON.getButtonName()).build()))
                 .keyboardRow(new KeyboardRow(
-                        KeyboardButton.builder().text(ButtonNameEnum.HELP_BUTTON.getButtonName()).build())).build();
+                        KeyboardButton.builder().text(ButtonNameEnum.FIFTEEN_MIN_BUTTON.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.THIRTY_MIN_BUTTON.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.HELP_BUTTON.getButtonName()).build()))
+                .build();
 
         replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setResizeKeyboard(true);
@@ -40,16 +43,20 @@ public class ReplyKeyboardMaker {
         ReplyKeyboardMarkup replyKeyboardMarkup = ReplyKeyboardMarkup.builder()
                 .keyboardRow(new KeyboardRow(
                         KeyboardButton.builder().text(ButtonNameEnum.FIND_RANDOM_RECIPE_BUTTON.getButtonName()).build(),
-                        KeyboardButton.builder().text(ButtonNameEnum.ADD_RECIPE_BUTTON.getButtonName()).build(),
-                        KeyboardButton.builder().text(ButtonNameEnum.USERS_BUTTON.getButtonName()).build()))
+                        KeyboardButton.builder().text(ButtonNameEnum.ADD_RECIPE_BUTTON.getButtonName()).build()
+//                                , KeyboardButton.builder().text(ButtonNameEnum.USERS_BUTTON.getButtonName()).build()
+                ))
                 .keyboardRow(new KeyboardRow(
                         KeyboardButton.builder().text(ButtonNameEnum.BREAKFAST_BUTTON.getButtonName()).build(),
                         KeyboardButton.builder().text(ButtonNameEnum.LUNCH_BUTTON.getButtonName()).build(),
                         KeyboardButton.builder().text(ButtonNameEnum.DINNER_BUTTON.getButtonName()).build()))
                 .keyboardRow(new KeyboardRow(
-                        KeyboardButton.builder().text(ButtonNameEnum.HELP_BUTTON.getButtonName()).build()))
+                        KeyboardButton.builder().text(ButtonNameEnum.FIFTEEN_MIN_BUTTON.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.THIRTY_MIN_BUTTON.getButtonName()).build()))
                 .keyboardRow(new KeyboardRow(
-                        KeyboardButton.builder().text(ButtonNameEnum.SEND_NOTIFICATION.getButtonName()).build())).build();
+                        KeyboardButton.builder().text(ButtonNameEnum.SEND_NOTIFICATION.getButtonName()).build(),
+                        KeyboardButton.builder().text(ButtonNameEnum.HELP_BUTTON.getButtonName()).build()))
+                .build();
 
         replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setResizeKeyboard(true);

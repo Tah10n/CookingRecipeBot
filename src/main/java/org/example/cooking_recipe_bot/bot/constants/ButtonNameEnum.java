@@ -6,6 +6,8 @@ public enum ButtonNameEnum {
     BREAKFAST_BUTTON("Завтрак"),
     LUNCH_BUTTON("Обед"),
     DINNER_BUTTON("Ужин"),
+    FIFTEEN_MIN_BUTTON("15мин"),
+    THIRTY_MIN_BUTTON("30мин"),
     ADD_RECIPE_BUTTON("Добавить рецепт"),
     DELETE_RECIPE_BUTTON("Удалить рецепт"),
     FIND_RANDOM_RECIPE_BUTTON("Найти случайный рецепт"),
