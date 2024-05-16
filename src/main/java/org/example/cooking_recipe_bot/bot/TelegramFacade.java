@@ -45,7 +45,6 @@ public class TelegramFacade {
         try {
             return updateHandler.handle(update);
         } catch (TelegramApiException e) {
-
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
             return SendMessage.builder().text(BotMessageEnum.EXCEPTION_UPDATE_HANDLE.getMessage()).chatId(chatId).build();

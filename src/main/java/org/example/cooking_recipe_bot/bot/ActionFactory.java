@@ -14,12 +14,11 @@ import org.example.cooking_recipe_bot.db.entity.User;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
-import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
@@ -93,10 +92,7 @@ public class ActionFactory {
 
     private boolean checkUserIsNotAdmin(Update update) {
         User user = userDAO.findById(update.getMessage().getFrom().getId()).orElse(null);
-        if (user == null || !user.getIsAdmin()) {
-            return true;
-        }
-        return false;
+        return user == null || !user.getIsAdmin();
     }
 
     private @NotNull Runnable getGetUsersAction(Update update) {
@@ -112,7 +108,6 @@ public class ActionFactory {
         };
     }
 
-    //TODO: additional check for user isAdmin?
     private @NotNull Runnable getAddRecipeAction(Update update) {
         return () -> {
             if (checkUserIsNotAdmin(update)) return;
@@ -162,8 +157,7 @@ public class ActionFactory {
             long chatId = update.getMessage().getChatId();
 
             try {
-
-                telegramClient.execute(SendMessage.builder().chatId(chatId).text(BotMessageEnum.HELP_MESSAGE.getMessage()).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
+                telegramClient.execute(SendMessage.builder().chatId(chatId).text(BotMessageEnum.HELP_MESSAGE.getMessage()).parseMode(ParseMode.MARKDOWN).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
                 log.error(Arrays.toString(e.getStackTrace()));
@@ -176,8 +170,14 @@ public class ActionFactory {
         return () -> {
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             long chatId = update.getMessage().getChatId();
+            String userName;
+            if (user.getUserName() != null) {
+                userName = user.getUserName();
+            } else {
+                userName = user.getFirstName() != null ? user.getFirstName() : "друг";
+            }
             try {
-                telegramClient.execute(SendMessage.builder().chatId(chatId).text("Привет, " + user.getUserName() + "\n\n" + BotMessageEnum.HELP_MESSAGE.getMessage()).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
+                telegramClient.execute(SendMessage.builder().chatId(chatId).text("Привет, " + userName + "\n\n" + BotMessageEnum.HELP_MESSAGE.getMessage()).parseMode(ParseMode.MARKDOWN).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
                 log.error(Arrays.toString(e.getStackTrace()));
@@ -227,8 +227,7 @@ public class ActionFactory {
                 .chatId(chatId)
                 .text("Продолжить показывать рецепты? \n" +
                         "(или отправьте новый запрос)")
-                .replyMarkup(inlineKeyboardMaker.getMoreRecipesKeyboard())
-                .build();
+                .replyMarkup(inlineKeyboardMaker.getMoreRecipesKeyboard()).build();
         try {
             telegramClient.execute(sendMessage);
 
@@ -269,72 +268,36 @@ public class ActionFactory {
 
     }
 
-    private void sendAnimation(Update update, Recipe recipe, User user) {
-        SendAnimation animation = createAnimation(update, recipe);
-        animation.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0, user.getIsAdmin()));
-        try {
-            telegramClient.execute(animation);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
-        }
-    }
-
-    private void sendVideo(Update update, Recipe recipe, User user) {
-        SendVideo video = createVideo(update, recipe);
-        video.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0, user.getIsAdmin()));
-        try {
-            telegramClient.execute(video);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
-        }
-    }
-
-    private void sendPhoto(Update update, Recipe recipe, User user) {
-        SendPhoto photo = createPhoto(update, recipe);
-        photo.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0, user.getIsAdmin()));
-        try {
-            telegramClient.execute(photo);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
-        }
-    }
-
-    private SendAnimation createAnimation(Update update, Recipe recipe) {
-        return SendAnimation.builder()
-                .chatId(update.getMessage().getChatId())
-                .animation(new InputFile(recipe.getAnimationId()))
-                .build();
-    }
-
-    private SendVideo createVideo(Update update, Recipe recipe) {
-        return SendVideo.builder()
-                .chatId(update.getMessage().getChatId())
-                .video(new InputFile(recipe.getVideoId()))
-                .build();
-    }
-
-    private SendPhoto createPhoto(Update update, Recipe recipe) {
-        return SendPhoto.builder()
-                .chatId(update.getMessage().getChatId())
-                .caption("")
-                .photo(new InputFile(recipe.getPhotoId()))
-                .build();
-    }
-
     private void sendTextRecipe(Long chatId, Recipe recipe, User user) {
+        InlineKeyboardMarkup recipeKeyboard = inlineKeyboardMaker.getRecipeKeyboard(recipe, 0, user.getIsAdmin());
+
+        recipeKeyboard = getRecipeKeyboardWithRateButton(recipe, user, recipeKeyboard);
+        Double rating = recipe.getRating() == null ? 0 : recipe.getRating();
+
         SendMessage sendMessage = SendMessage.builder()
                 .chatId(chatId)
-                .text("*" + recipe.getName().toUpperCase() + "*").parseMode(ParseMode.MARKDOWN)
+                .text("*" + recipe.getName().toUpperCase() + "* \nРейтинг: " + String.format("%.2f", rating)).parseMode(ParseMode.MARKDOWN)
                 .build();
-        sendMessage.setReplyMarkup(inlineKeyboardMaker.getRecipeKeyboard(recipe, 0, user.getIsAdmin()));
+        sendMessage.setReplyMarkup(recipeKeyboard);
         try {
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
         }
+    }
+
+    public InlineKeyboardMarkup getRecipeKeyboardWithRateButton(Recipe recipe, User user, InlineKeyboardMarkup recipeKeyboard) {
+
+        if (checkUserIsNotVote(user, recipe) && recipeKeyboard.getKeyboard().get(0).get(0).getText().equals("закрыть")) {
+            recipeKeyboard = inlineKeyboardMaker.addRateButtonKeyboard(recipeKeyboard, recipe);
+        }
+        return recipeKeyboard;
+    }
+
+    private boolean checkUserIsNotVote(User user, Recipe recipe) {
+        Long userId = user.getId();
+        List<Long> votedUsersIds = recipe.getVotedUsersIds();
+        return votedUsersIds == null || !votedUsersIds.contains(userId);
     }
 }

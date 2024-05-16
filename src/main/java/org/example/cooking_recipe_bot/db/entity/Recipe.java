@@ -5,6 +5,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
+
 @Data
 @Document(collection = "recipes")
 public class Recipe {
@@ -20,6 +22,8 @@ public class Recipe {
     private String animationId;
     private String videoId;
     private String hashtags;
+    private Double rating;
+    private List<Long> votedUsersIds;
 
     @Override
     public String toString() {
