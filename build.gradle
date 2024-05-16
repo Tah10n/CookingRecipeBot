@@ -15,7 +15,7 @@ docker {
 
         baseImage = 'openjdk:17-alpine'
         maintainer = 'Andrei Surkov'
-        ports = [8443]
+        ports = [8443,23231]
         images = ['tah10n/cooking-recipe-bot:0.0.1-SNAPSHOT']
     }
 }

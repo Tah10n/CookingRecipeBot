@@ -16,6 +16,7 @@ import org.example.cooking_recipe_bot.utils.RecipeParser;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
@@ -171,12 +172,14 @@ public class MessageHandler implements UpdateHandler {
 
 
     private SendMessage sendNotificationToUsers(Update update, User user) {
+        List<MessageEntity> messageEntities = update.getMessage().getEntities();
         String notificationText = update.getMessage().getText();
         List<User> users = userDAO.findAllUsers();
         for (User u : users) {
-            SendMessage sendMessage = SendMessage.builder().chatId(u.getChatId()).text(notificationText).build();
-            log.info("Sending message to users: " + notificationText);
+            SendMessage sendMessage = SendMessage.builder().chatId(u.getChatId()).text(notificationText).entities(messageEntities).build();
+
             try {
+                log.info("Sending message to user " + u.toString());
                 telegramClient.execute(sendMessage);
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());

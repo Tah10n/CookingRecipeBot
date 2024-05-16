@@ -41,6 +41,9 @@ public class TelegramFacade {
         } else if (update.hasMessage()) {
             updateHandler = messageHandler;
             chatId = update.getMessage().getChatId();
+        } else {
+            log.info("No inline, callback or message in handleUpdate");
+            log.info(update.toString());
         }
         try {
             return updateHandler.handle(update);

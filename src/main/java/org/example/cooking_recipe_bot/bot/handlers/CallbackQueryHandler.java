@@ -211,7 +211,6 @@ public class CallbackQueryHandler implements UpdateHandler {
                 telegramClient.execute(editMessageReplyMarkup);
                 break;
             case ("rate_1"):
-
                 rateRecipe(recipeId, userId, chatId, messageId, 1);
                 break;
             case ("rate_2"):
@@ -269,7 +268,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         rating = (rating + ratingFromUser) / 2;
         recipe.setRating(rating);
         List<Long> votedUsersIds = recipe.getVotedUsersIds();
-        if(votedUsersIds == null) {
+        if (votedUsersIds == null) {
             votedUsersIds = new ArrayList<>();
         }
         votedUsersIds.add(userId);
