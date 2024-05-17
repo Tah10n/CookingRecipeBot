@@ -4,6 +4,7 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 
 import java.util.List;
 
@@ -24,6 +25,7 @@ public class Recipe {
     private String hashtags;
     private Double rating;
     private List<Long> votedUsersIds;
+    private List<MyMessageEntity> messageEntities;
 
     @Override
     public String toString() {

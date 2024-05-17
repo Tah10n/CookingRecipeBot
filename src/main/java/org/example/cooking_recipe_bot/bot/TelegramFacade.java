@@ -21,7 +21,7 @@ public class TelegramFacade {
     private final MessageHandler messageHandler;
     private final CallbackQueryHandler callbackQueryHandler;
     private final UserDAO userDAO;
-    private UpdateHandler updateHandler;
+
     private final InlineQueryHandler inlineQueryHandler;
 
 
@@ -34,7 +34,8 @@ public class TelegramFacade {
 
 
     public BotApiMethod<?> handleUpdate(Update update) {
-        Long chatId = 0L;
+        UpdateHandler updateHandler;
+        Long chatId;
         if (update.hasInlineQuery()) {
             updateHandler = inlineQueryHandler;
             chatId = update.getInlineQuery().getFrom().getId();
@@ -53,6 +54,7 @@ public class TelegramFacade {
         } else {
             log.info("No inline, callback or message in handleUpdate");
             log.info(update.toString());
+            return null;
         }
         try {
             return updateHandler.handle(update);

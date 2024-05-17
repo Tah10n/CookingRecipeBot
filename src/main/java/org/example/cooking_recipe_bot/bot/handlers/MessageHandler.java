@@ -11,8 +11,10 @@ import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
+import org.example.cooking_recipe_bot.db.entity.MyMessageEntity;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
+import org.example.cooking_recipe_bot.utils.MessageEntityMapper;
 import org.example.cooking_recipe_bot.utils.RecipeParser;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
@@ -52,7 +54,7 @@ public class MessageHandler implements UpdateHandler {
     @Override
     public SendMessage handle(Update update) {
         if (!update.hasMessage()) {
-            log.error(this.getClass().getName() + " No message in update");
+            log.error("{} No message in update", this.getClass().getName());
             log.error(update.toString());
             return null;
         }
@@ -215,14 +217,16 @@ public class MessageHandler implements UpdateHandler {
 
     private SendMessage updateRecipe(Update update, SendMessage sendMessage, User user) {
         Recipe recipe;
-        List<MessageEntity> messageEntities = new ArrayList<>();
+        String inputText = update.getMessage().getText();
+        List<MyMessageEntity> messageEntities = new ArrayList<>();
+        int offset = inputText.lastIndexOf("///") + 3;
         if (update.getMessage().getEntities() != null) {
-            messageEntities = update.getMessage().getEntities();
+            messageEntities = MessageEntityMapper.mapToMyMessageEntities(update.getMessage().getEntities(), offset);
             log.debug("messageEntities=" + messageEntities);
         }
-        String inputText = update.getMessage().getText();
-        String inputFormattedText = createFormattedText(inputText, messageEntities);
-        String[] split = inputFormattedText.split("///");
+
+//        String inputFormattedText = createFormattedText(inputText, messageEntities);
+        String[] split = inputText.split("///");
         if (split.length != 3) {
             sendMessage.setText("Неверный формат: не стирайте служебную строку /edit_recipe///...///");
             log.debug(this.getClass().getName() + " split.length=" + split.length);
@@ -240,6 +244,7 @@ public class MessageHandler implements UpdateHandler {
             recipeToEdit.setIngredients(recipe.getIngredients());
             recipeToEdit.setInstructions(recipe.getInstructions());
             recipeToEdit.setHashtags(recipe.getHashtags());
+            recipeToEdit.setMessageEntities(messageEntities);
 
             recipeDAO.updateRecipe(recipeToEdit);
             sendMessage.setText("Рецепт изменен");
@@ -296,7 +301,12 @@ public class MessageHandler implements UpdateHandler {
         recipe.setThumbnailId(thumbnailId);
         recipeDAO.updateRecipe(recipe);
         sendMessage.setText("Фото обновлено");
-
+        try {
+            actionFactory.sendRecipesList(user.getId(), update.getMessage().getChatId(), List.of(recipe));
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+        }
         botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
     }

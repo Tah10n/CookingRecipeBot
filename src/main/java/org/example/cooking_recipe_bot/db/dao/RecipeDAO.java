@@ -31,6 +31,7 @@ public class RecipeDAO {
     }
 
     public Recipe getRandomRecipe() {
+        //todo get rnd from db
         List<Recipe> recipes = recipesRepository.findAll();
         if(recipes.isEmpty()) return null;
         int index = (int) (Math.random() * recipes.size());

@@ -11,6 +11,7 @@ import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
+import org.example.cooking_recipe_bot.utils.MessageEntityMapper;
 import org.example.cooking_recipe_bot.utils.UserParser;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageRe
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaAnimation;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
@@ -130,6 +132,11 @@ public class CallbackQueryHandler implements UpdateHandler {
                 }
 
                 EditMessageText editMessageTextFromOpenButton = null;
+                List<MessageEntity> messageEntities = new ArrayList<>();
+                if(recipe.getMessageEntities() != null) {
+                    messageEntities = MessageEntityMapper.mapToMessageEntities(recipe.getMessageEntities());
+                    log.debug("messageEntities=" + messageEntities);
+                }
                 if (opened == 0) {
                     if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
                         if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
@@ -147,7 +154,8 @@ public class CallbackQueryHandler implements UpdateHandler {
                             telegramClient.execute(deleteMessage);
                             SendAnimation sendAnimation = SendAnimation.builder().chatId(chatId)
                                     .animation(new InputFile(recipe.getAnimationId())).build();
-                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).parseMode(ParseMode.HTML).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
+                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString())
+                                    .entities(messageEntities).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
                             telegramClient.execute(sendAnimation);
                             telegramClient.execute(sendMessage);
                             break;
@@ -156,13 +164,15 @@ public class CallbackQueryHandler implements UpdateHandler {
                             telegramClient.execute(deleteMessage);
                             SendVideo sendVideo = SendVideo.builder().chatId(chatId)
                                     .video(new InputFile(recipe.getVideoId())).build();
-                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).parseMode(ParseMode.HTML).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
+                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString())
+                                    .entities(messageEntities).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
                             telegramClient.execute(sendVideo);
                             telegramClient.execute(sendMessage);
                             break;
                         }
                     }
-                    editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString()).parseMode(ParseMode.HTML).build();
+                    editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString())
+                            .entities(messageEntities).build();
                     editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
                 } else if (opened == 1) {
                     editMessageTextFromOpenButton = getEditMessageTextFromOpenButton(recipe, chatId, messageId, userId);

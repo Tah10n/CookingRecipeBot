@@ -95,8 +95,8 @@ public class InlineQueryHandler implements UpdateHandler {
                             .messageText(recipe.toString())
                             .build())
                     .build();
-            if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
-                String thumbnailUrl = getUrlFromFileId(recipe.getPhotoId());
+            if (recipe.getThumbnailId() != null && !recipe.getThumbnailId().isEmpty()) {
+                String thumbnailUrl = getUrlFromFileId(recipe.getThumbnailId());
                 article.setThumbnailUrl(thumbnailUrl);
             }
             inlineQueryResults.add(article);
