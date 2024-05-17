@@ -15,21 +15,17 @@ import java.util.List;
 public class InlineKeyboardMaker {
     public InlineKeyboardMarkup getUserKeyboard(Long userId, boolean isAdmin) {
         if (isAdmin) {
-            InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+            return InlineKeyboardMarkup.builder()
                     .keyboardRow(new InlineKeyboardRow(
                             InlineKeyboardButton.builder().text("Удалить пользователя").callbackData("delete_user_button:" + userId).build(),
                             InlineKeyboardButton.builder().text("Убрать из админов").callbackData("unset_admin_button:" + userId).build()
                     )).build();
-
-            return inlineKeyboardMarkup;
         } else {
-            InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+            return InlineKeyboardMarkup.builder()
                     .keyboardRow(new InlineKeyboardRow(
                             InlineKeyboardButton.builder().text("Удалить пользователя").callbackData("delete_user_button:" + userId).build(),
                             InlineKeyboardButton.builder().text("Сделать админом").callbackData("set_admin_button:" + userId).build()
                     )).build();
-
-            return inlineKeyboardMarkup;
         }
 
     }
@@ -48,14 +44,12 @@ public class InlineKeyboardMaker {
             InlineKeyboardButton changePhotoButton = InlineKeyboardButton.builder().text("Изменить фото").callbackData("change_photo_button:" + recipe.getId()).build();
             InlineKeyboardButton changeVideoButton = InlineKeyboardButton.builder().text("Изменить видео").callbackData("change_video_button:" + recipe.getId()).build();
             InlineKeyboardButton editButton = InlineKeyboardButton.builder().text("Редактировать")
-                    .switchInlineQueryCurrentChat("/edit_recipe//" + recipe.getId() + "//" + recipe.toString()).build();
+                    .switchInlineQueryCurrentChat("/edit_recipe///" + recipe.getId() + "///" + recipe).build();
 
-            InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+            return InlineKeyboardMarkup.builder()
                     .keyboardRow(new InlineKeyboardRow(openButton))
                     .keyboardRow(new InlineKeyboardRow(editButton, deleteButton))
                     .keyboardRow(new InlineKeyboardRow(changePhotoButton, changeVideoButton)).build();
-
-            return inlineKeyboardMarkup;
         } else {
             InlineKeyboardButton openButton;
             if (isOpened == 0) {
@@ -63,10 +57,8 @@ public class InlineKeyboardMaker {
             } else {
                 openButton = InlineKeyboardButton.builder().text("закрыть").callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
             }
-            InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+            return InlineKeyboardMarkup.builder()
                     .keyboardRow(new InlineKeyboardRow(openButton)).build();
-
-            return inlineKeyboardMarkup;
         }
 
     }
@@ -74,8 +66,7 @@ public class InlineKeyboardMaker {
     public InlineKeyboardMarkup addRateButtonKeyboard(InlineKeyboardMarkup inlineKeyboardMarkup, Recipe recipe) {
         InlineKeyboardButton rateButton = InlineKeyboardButton.builder().text("оценить")
                 .callbackData("rate_button:" + recipe.getId()).build();
-        List<InlineKeyboardRow> keyboardRows = new ArrayList<>();
-        keyboardRows.addAll(inlineKeyboardMarkup.getKeyboard());
+        List<InlineKeyboardRow> keyboardRows = new ArrayList<>(inlineKeyboardMarkup.getKeyboard());
         keyboardRows.add(new InlineKeyboardRow(rateButton));
         InlineKeyboardMarkup inlineKeyboardMarkup1 = InlineKeyboardMarkup.builder().build();
         inlineKeyboardMarkup1.setKeyboard(keyboardRows);
@@ -94,10 +85,8 @@ public class InlineKeyboardMaker {
     public ReplyKeyboard getYesOrNoForDeleteRecipeKeyboard(String recipeId) {
         InlineKeyboardButton yesButton = InlineKeyboardButton.builder().text(ButtonNameEnum.YES.getButtonName()).callbackData("yes_for_delete_recipe_button:" + recipeId).build();
         InlineKeyboardButton noButton = InlineKeyboardButton.builder().text(ButtonNameEnum.NO.getButtonName()).callbackData("no_for_delete_recipe_button:" + recipeId).build();
-        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+        return InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(yesButton, noButton)).build();
-
-        return inlineKeyboardMarkup;
     }
 
     public InlineKeyboardRow getRatingButtons(String recipeId) {

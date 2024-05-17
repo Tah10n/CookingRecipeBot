@@ -157,7 +157,7 @@ public class ActionFactory {
             long chatId = update.getMessage().getChatId();
 
             try {
-                telegramClient.execute(SendMessage.builder().chatId(chatId).text(BotMessageEnum.HELP_MESSAGE.getMessage()).parseMode(ParseMode.MARKDOWN).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
+                telegramClient.execute(SendMessage.builder().chatId(chatId).text(BotMessageEnum.HELP_MESSAGE.getMessage()).parseMode(ParseMode.HTML).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
                 log.error(Arrays.toString(e.getStackTrace()));
@@ -177,7 +177,8 @@ public class ActionFactory {
                 userName = user.getFirstName() != null ? user.getFirstName() : "друг";
             }
             try {
-                telegramClient.execute(SendMessage.builder().chatId(chatId).text("Привет, " + userName + "\n\n" + BotMessageEnum.HELP_MESSAGE.getMessage()).parseMode(ParseMode.MARKDOWN).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
+                telegramClient.execute(SendMessage.builder().chatId(chatId).text("Привет, " + userName + "\n\n" + BotMessageEnum.HELP_MESSAGE.getMessage())
+                        .parseMode(ParseMode.HTML).replyMarkup(replyKeyboardMaker.getMainMenuKeyboard(user)).build());
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
                 log.error(Arrays.toString(e.getStackTrace()));
@@ -276,7 +277,7 @@ public class ActionFactory {
 
         SendMessage sendMessage = SendMessage.builder()
                 .chatId(chatId)
-                .text("*" + recipe.getName().toUpperCase() + "* \nРейтинг: " + String.format("%.2f", rating)).parseMode(ParseMode.MARKDOWN)
+                .text("<b>" + recipe.getName().toUpperCase() + "</b> \nРейтинг: " + String.format("%.2f", rating)).parseMode(ParseMode.HTML)
                 .build();
         sendMessage.setReplyMarkup(recipeKeyboard);
         try {

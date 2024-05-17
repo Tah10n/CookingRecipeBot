@@ -29,7 +29,6 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaAnimation;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaVideo;
-import org.telegram.telegrambots.meta.api.objects.message.MaybeInaccessibleMessage;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
@@ -148,7 +147,7 @@ public class CallbackQueryHandler implements UpdateHandler {
                             telegramClient.execute(deleteMessage);
                             SendAnimation sendAnimation = SendAnimation.builder().chatId(chatId)
                                     .animation(new InputFile(recipe.getAnimationId())).build();
-                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
+                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).parseMode(ParseMode.HTML).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
                             telegramClient.execute(sendAnimation);
                             telegramClient.execute(sendMessage);
                             break;
@@ -157,13 +156,13 @@ public class CallbackQueryHandler implements UpdateHandler {
                             telegramClient.execute(deleteMessage);
                             SendVideo sendVideo = SendVideo.builder().chatId(chatId)
                                     .video(new InputFile(recipe.getVideoId())).build();
-                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
+                            sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString()).parseMode(ParseMode.HTML).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
                             telegramClient.execute(sendVideo);
                             telegramClient.execute(sendMessage);
                             break;
                         }
                     }
-                    editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString()).build();
+                    editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString()).parseMode(ParseMode.HTML).build();
                     editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
                 } else if (opened == 1) {
                     editMessageTextFromOpenButton = getEditMessageTextFromOpenButton(recipe, chatId, messageId, userId);
@@ -252,7 +251,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         Double rating = recipe.getRating() == null ? 0 : recipe.getRating();
 
         editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId)
-                .text("*" + recipe.getName().toUpperCase() + "* \nРейтинг: " + String.format("%.2f", rating)).parseMode(ParseMode.MARKDOWN).build();
+                .text("<b>" + recipe.getName().toUpperCase() + "</b> \nРейтинг: " + String.format("%.2f", rating)).parseMode(ParseMode.HTML).build();
         editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 0, userId));
         return editMessageTextFromOpenButton;
     }
@@ -263,7 +262,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         recipe = recipeDAO.findRecipeById(recipeId);
         Double rating = recipe.getRating();
         if (rating == null) {
-            rating = Double.valueOf(ratingFromUser);
+            rating = (double) ratingFromUser;
         }
         rating = (rating + ratingFromUser) / 2;
         recipe.setRating(rating);
@@ -279,8 +278,7 @@ public class CallbackQueryHandler implements UpdateHandler {
     }
 
     private InlineKeyboardMarkup changeToRatingButtons(InlineKeyboardMarkup inlineKeyboardMarkup, String recipeId) {
-        List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.addAll(inlineKeyboardMarkup.getKeyboard());
+        List<InlineKeyboardRow> rows = new ArrayList<>(inlineKeyboardMarkup.getKeyboard());
         rows.remove(rows.size() - 1);
         rows.add(inlineKeyboardMaker.getRatingButtons(recipeId));
         inlineKeyboardMarkup.setKeyboard(rows);
@@ -297,10 +295,7 @@ public class CallbackQueryHandler implements UpdateHandler {
 
     private InlineKeyboardMarkup getReplyMarkup(Recipe recipe, int state, long userId) {
         User user = userDAO.getUserById(userId);
-        InlineKeyboardMarkup recipeKeyboardWithRateButton = actionFactory.getRecipeKeyboardWithRateButton(recipe, user, inlineKeyboardMaker.getRecipeKeyboard(recipe, state, user.getIsAdmin()));
-
-        return recipeKeyboardWithRateButton;
-
+        return actionFactory.getRecipeKeyboardWithRateButton(recipe, user, inlineKeyboardMaker.getRecipeKeyboard(recipe, state, user.getIsAdmin()));
     }
 
 }

@@ -1,6 +1,7 @@
 package org.example.cooking_recipe_bot.bot.handlers;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.example.cooking_recipe_bot.bot.ActionFactory;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
@@ -24,10 +25,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -60,7 +58,7 @@ public class MessageHandler implements UpdateHandler {
         }
         Message message = update.getMessage();
         User user = getOrCreateUserFromUpdate(update);
-        if(user == null) {
+        if (user == null) {
             log.error(this.getClass().getName() + " No user in update");
             log.error(update.toString());
             return null;
@@ -90,7 +88,7 @@ public class MessageHandler implements UpdateHandler {
                     case WAITING_FOR_VIDEO:
                         return handleWaitingForVideoState(sendMessage, inputText, user);
                     case WAITING_FOR_NOTIFICATION:
-                        return sendNotificationToUsers(update, user);
+                        return sendNotificationToUsers(update);
                 }
             }
         } else {
@@ -171,21 +169,21 @@ public class MessageHandler implements UpdateHandler {
     }
 
 
-    private SendMessage sendNotificationToUsers(Update update, User user) {
+    private SendMessage sendNotificationToUsers(Update update) {
         List<MessageEntity> messageEntities = update.getMessage().getEntities();
         String notificationText = update.getMessage().getText();
         List<User> users = userDAO.findAllUsers();
-        for (User u : users) {
-            SendMessage sendMessage = SendMessage.builder().chatId(u.getChatId()).text(notificationText).entities(messageEntities).build();
+        for (User usr : users) {
+            SendMessage sendMessage = SendMessage.builder().chatId(usr.getChatId()).text(notificationText).entities(messageEntities).build();
 
             try {
-                log.info("Sending message to user " + u.toString());
+                log.info("Sending message to user " + usr);
                 telegramClient.execute(sendMessage);
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
                 log.error(Arrays.toString(e.getStackTrace()));
             } finally {
-                botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
+                botStateContextDAO.changeBotState(usr.getId(), BotState.DEFAULT);
             }
         }
 
@@ -217,11 +215,16 @@ public class MessageHandler implements UpdateHandler {
 
     private SendMessage updateRecipe(Update update, SendMessage sendMessage, User user) {
         Recipe recipe;
-
+        List<MessageEntity> messageEntities = new ArrayList<>();
+        if (update.getMessage().getEntities() != null) {
+            messageEntities = update.getMessage().getEntities();
+            log.debug("messageEntities=" + messageEntities);
+        }
         String inputText = update.getMessage().getText();
-        String[] split = inputText.split("//");
+        String inputFormattedText = createFormattedText(inputText, messageEntities);
+        String[] split = inputFormattedText.split("///");
         if (split.length != 3) {
-            sendMessage.setText("Неверный формат: не стирайте служебную строку /edit_recipe//...//");
+            sendMessage.setText("Неверный формат: не стирайте служебную строку /edit_recipe///...///");
             log.debug(this.getClass().getName() + " split.length=" + split.length);
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             return sendMessage;
@@ -256,6 +259,28 @@ public class MessageHandler implements UpdateHandler {
         return sendMessage;
     }
 
+    private String createFormattedText(String inputText, List<MessageEntity> messageEntities) {
+        for (MessageEntity messageEntity : messageEntities) {
+            if(messageEntity.getType().equals("bold")) {
+                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<b>" + messageEntity.getText() + "</b>");
+            } else if(messageEntity.getType().equals("italic")) {
+                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<i>" + messageEntity.getText() + "</i>");
+            } else if(messageEntity.getType().equals("underline")) {
+                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<u>" + messageEntity.getText() + "</u>");
+            } else if(messageEntity.getType().equals("code")) {
+                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<code>" + messageEntity.getText() + "</code>");
+            } else if(messageEntity.getType().equals("strikethrough")) {
+                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<s>" + messageEntity.getText() + "</s>");
+            } else if(messageEntity.getType().equals("spoiler")) {
+                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<tg-spoiler>" + messageEntity.getText() + "</tg-spoiler>");
+            } else if(messageEntity.getType().equals("pre")) {
+                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<pre>" + messageEntity.getText() + "</pre>");
+            } else if(messageEntity.getType().equals("blockquote")) {
+                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<blockquote>" + messageEntity.getText() + "</blockquote>");}
+        }
+        return inputText;
+    }
+
     private SendMessage addPhoto(Update update, SendMessage sendMessage, User user) {
         String recipeId = botStateContextDAO.findBotStateContextById(user.getId()).getAdditionalData();
         Recipe recipe = recipeDAO.findRecipeById(recipeId);
@@ -277,12 +302,16 @@ public class MessageHandler implements UpdateHandler {
     }
 
     private SendMessage addNewRecipe(Update update, SendMessage sendMessage, User user) {
-
+        List<MessageEntity> messageEntities = new ArrayList<>();
+        if (update.getMessage().getEntities() != null) {
+            messageEntities = update.getMessage().getEntities();
+            log.debug("messageEntities=" + messageEntities);
+        }
+        String inputText = update.getMessage().hasText() ? update.getMessage().getText() : update.getMessage().getCaption();
+        String inputFormattedText = createFormattedText(inputText, messageEntities);
         Recipe recipe;
         try {
-
-            String inputText = update.getMessage().hasText() ? update.getMessage().getText() : update.getMessage().getCaption();
-            recipe = RecipeParser.parseRecipeFromString(inputText);
+            recipe = RecipeParser.parseRecipeFromString(inputFormattedText);
         } catch (ParseException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
