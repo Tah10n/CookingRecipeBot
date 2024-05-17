@@ -1,7 +1,6 @@
 package org.example.cooking_recipe_bot.bot.handlers;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.example.cooking_recipe_bot.bot.ActionFactory;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
@@ -225,7 +224,6 @@ public class MessageHandler implements UpdateHandler {
             log.debug("messageEntities=" + messageEntities);
         }
 
-//        String inputFormattedText = createFormattedText(inputText, messageEntities);
         String[] split = inputText.split("///");
         if (split.length != 3) {
             sendMessage.setText("Неверный формат: не стирайте служебную строку /edit_recipe///...///");
@@ -264,28 +262,6 @@ public class MessageHandler implements UpdateHandler {
         return sendMessage;
     }
 
-    private String createFormattedText(String inputText, List<MessageEntity> messageEntities) {
-        for (MessageEntity messageEntity : messageEntities) {
-            if(messageEntity.getType().equals("bold")) {
-                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<b>" + messageEntity.getText() + "</b>");
-            } else if(messageEntity.getType().equals("italic")) {
-                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<i>" + messageEntity.getText() + "</i>");
-            } else if(messageEntity.getType().equals("underline")) {
-                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<u>" + messageEntity.getText() + "</u>");
-            } else if(messageEntity.getType().equals("code")) {
-                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<code>" + messageEntity.getText() + "</code>");
-            } else if(messageEntity.getType().equals("strikethrough")) {
-                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<s>" + messageEntity.getText() + "</s>");
-            } else if(messageEntity.getType().equals("spoiler")) {
-                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<tg-spoiler>" + messageEntity.getText() + "</tg-spoiler>");
-            } else if(messageEntity.getType().equals("pre")) {
-                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<pre>" + messageEntity.getText() + "</pre>");
-            } else if(messageEntity.getType().equals("blockquote")) {
-                inputText = StringUtils.replace(inputText, messageEntity.getText(), "<blockquote>" + messageEntity.getText() + "</blockquote>");}
-        }
-        return inputText;
-    }
-
     private SendMessage addPhoto(Update update, SendMessage sendMessage, User user) {
         String recipeId = botStateContextDAO.findBotStateContextById(user.getId()).getAdditionalData();
         Recipe recipe = recipeDAO.findRecipeById(recipeId);
@@ -312,16 +288,16 @@ public class MessageHandler implements UpdateHandler {
     }
 
     private SendMessage addNewRecipe(Update update, SendMessage sendMessage, User user) {
-        List<MessageEntity> messageEntities = new ArrayList<>();
+        List<MyMessageEntity> messageEntities = new ArrayList<>();
+
         if (update.getMessage().getEntities() != null) {
-            messageEntities = update.getMessage().getEntities();
+            messageEntities = MessageEntityMapper.mapToMyMessageEntities(update.getMessage().getEntities(), 0);
             log.debug("messageEntities=" + messageEntities);
         }
         String inputText = update.getMessage().hasText() ? update.getMessage().getText() : update.getMessage().getCaption();
-        String inputFormattedText = createFormattedText(inputText, messageEntities);
         Recipe recipe;
         try {
-            recipe = RecipeParser.parseRecipeFromString(inputFormattedText);
+            recipe = RecipeParser.parseRecipeFromString(inputText);
         } catch (ParseException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
@@ -346,6 +322,7 @@ public class MessageHandler implements UpdateHandler {
                 recipe.setVideoId(videoId);
             }
 
+            recipe.setMessageEntities(messageEntities);
             Recipe savedRecipe = recipeDAO.saveRecipe(recipe);
 
             try {
