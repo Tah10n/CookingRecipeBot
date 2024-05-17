@@ -6,6 +6,7 @@ import org.example.cooking_recipe_bot.bot.handlers.CallbackQueryHandler;
 import org.example.cooking_recipe_bot.bot.handlers.InlineQueryHandler;
 import org.example.cooking_recipe_bot.bot.handlers.MessageHandler;
 import org.example.cooking_recipe_bot.bot.handlers.UpdateHandler;
+import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -17,16 +18,18 @@ import java.util.Arrays;
 @Slf4j
 @Component
 public class TelegramFacade {
-    final MessageHandler messageHandler;
-    final CallbackQueryHandler callbackQueryHandler;
-    UpdateHandler updateHandler;
-    InlineQueryHandler inlineQueryHandler;
+    private final MessageHandler messageHandler;
+    private final CallbackQueryHandler callbackQueryHandler;
+    private final UserDAO userDAO;
+    private UpdateHandler updateHandler;
+    private final InlineQueryHandler inlineQueryHandler;
 
 
-    public TelegramFacade(MessageHandler messageHandler, CallbackQueryHandler callbackQueryHandler, InlineQueryHandler inlineQueryHandler) {
+    public TelegramFacade(MessageHandler messageHandler, CallbackQueryHandler callbackQueryHandler, InlineQueryHandler inlineQueryHandler, UserDAO userDAO) {
         this.messageHandler = messageHandler;
         this.callbackQueryHandler = callbackQueryHandler;
         this.inlineQueryHandler = inlineQueryHandler;
+        this.userDAO = userDAO;
     }
 
 
@@ -41,6 +44,11 @@ public class TelegramFacade {
         } else if (update.hasMessage()) {
             updateHandler = messageHandler;
             chatId = update.getMessage().getChatId();
+        } else if (update.hasMyChatMember()) {
+            Long userId = update.getMyChatMember().getFrom().getId();
+            if (update.getMyChatMember().getNewChatMember().getStatus().equals("kicked")) {
+                    userDAO.deleteUser(userId);
+            }
         } else {
             log.info("No inline, callback or message in handleUpdate");
             log.info(update.toString());
