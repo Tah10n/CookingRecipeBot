@@ -49,6 +49,7 @@ public class TelegramFacade {
             if (update.getMyChatMember().getNewChatMember().getStatus().equals("kicked")) {
                     userDAO.deleteUser(userId);
             }
+            return null;
         } else {
             log.info("No inline, callback or message in handleUpdate");
             log.info(update.toString());
