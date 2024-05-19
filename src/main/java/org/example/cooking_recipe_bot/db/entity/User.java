@@ -14,6 +14,7 @@ public class User {
     private String userName;
     private Boolean isAdmin;
     private Long chatId;
+    private Boolean isUnsubscribed;
 
     @Override
     public String toString() {

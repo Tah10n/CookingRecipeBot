@@ -5,6 +5,7 @@ import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.db.repository.UsersRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,7 +47,16 @@ public class UserDAO {
     }
 
     public List<User> findAllUsers() {
-        return usersRepository.findAll();
+        List<User> all = usersRepository.findAll();
+        List<User> result = new ArrayList<>();
+        for (User user : all) {
+            if (user.getIsUnsubscribed() != null && user.getIsUnsubscribed()) {
+                continue;
+            } else {
+                result.add(user);
+            }
+        }
+        return result;
     }
 
     public void setAdmin(long userId) {

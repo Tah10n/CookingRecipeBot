@@ -7,6 +7,7 @@ import org.example.cooking_recipe_bot.bot.handlers.InlineQueryHandler;
 import org.example.cooking_recipe_bot.bot.handlers.MessageHandler;
 import org.example.cooking_recipe_bot.bot.handlers.UpdateHandler;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
+import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -14,6 +15,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -48,7 +50,12 @@ public class TelegramFacade {
         } else if (update.hasMyChatMember()) {
             Long userId = update.getMyChatMember().getFrom().getId();
             if (update.getMyChatMember().getNewChatMember().getStatus().equals("kicked")) {
-                    userDAO.deleteUser(userId);
+                Optional<User> user = userDAO.findById(userId);
+                if (user.isPresent()) {
+                    user.get().setIsUnsubscribed(true);
+                    userDAO.saveUser(user.get());
+                }
+
             }
             return null;
         } else {
