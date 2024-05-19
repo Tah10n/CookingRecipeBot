@@ -27,6 +27,7 @@ public class ReplyKeyboardMaker {
         replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setResizeKeyboard(true);
         replyKeyboardMarkup.setOneTimeKeyboard(false);
+        replyKeyboardMarkup.setIsPersistent(true);
 
         return replyKeyboardMarkup;
     }
@@ -61,6 +62,7 @@ public class ReplyKeyboardMaker {
         replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setResizeKeyboard(true);
         replyKeyboardMarkup.setOneTimeKeyboard(false);
+        replyKeyboardMarkup.setIsPersistent(true);
 
         return replyKeyboardMarkup;
     }

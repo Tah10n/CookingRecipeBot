@@ -183,7 +183,8 @@ public class CallbackQueryHandler implements UpdateHandler {
             case ("change_photo_button"):
                 userId = update.getCallbackQuery().getFrom().getId();
                 recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
-                sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое фото или напишите delete если хотите удалить фото").build();
+                sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое фото или напишите delete если хотите удалить фото")
+                        .replyMarkup(inlineKeyboardMaker.getCancelKeyboard()).build();
                 telegramClient.execute(sendMessage);
 
                 botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_PHOTO, recipeId);
@@ -192,7 +193,8 @@ public class CallbackQueryHandler implements UpdateHandler {
             case ("change_video_button"):
                 userId = update.getCallbackQuery().getFrom().getId();
                 recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
-                sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое видео или напишите delete если хотите удалить видео").build();
+                sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое видео или напишите delete если хотите удалить видео")
+                        .replyMarkup(inlineKeyboardMaker.getCancelKeyboard()).build();
                 telegramClient.execute(sendMessage);
 
                 botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_VIDEO, recipeId);

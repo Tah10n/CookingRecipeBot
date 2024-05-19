@@ -20,6 +20,7 @@ public class Recipe {
     private String instructions;
     private String text;
     private Date dateOfCreation;
+    private Date dateOfLastEdit;
     private String thumbnailId;
     private String photoId;
     private String animationId;

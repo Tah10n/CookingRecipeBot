@@ -97,4 +97,10 @@ public class InlineKeyboardMaker {
         InlineKeyboardButton fiveButton = InlineKeyboardButton.builder().text("5").callbackData("rate_5:" + recipeId).build();
         return new InlineKeyboardRow(oneButton, twoButton, threeButton, fourButton, fiveButton);
     }
+
+    public InlineKeyboardMarkup getCancelKeyboard() {
+        InlineKeyboardButton cancelButton = InlineKeyboardButton.builder().text(ButtonNameEnum.CANCEL.getButtonName()).callbackData("cancel_button:").build();
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(cancelButton)).build();
+    }
 }

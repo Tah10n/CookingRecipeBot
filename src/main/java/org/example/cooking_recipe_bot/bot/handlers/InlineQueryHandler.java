@@ -4,6 +4,7 @@ import java.util.Arrays;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
+import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.config.BotConfig;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
@@ -34,12 +35,14 @@ public class InlineQueryHandler implements UpdateHandler {
     private final RecipeDAO recipeDAO;
     private final BotStateContextDAO botStateContextDAO;
     private final BotConfig botConfig;
+    private final InlineKeyboardMaker inlineKeyboardMaker;
 
-    public InlineQueryHandler(TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig) {
+    public InlineQueryHandler(TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig, InlineKeyboardMaker inlineKeyboardMaker) {
         this.telegramClient = telegramClient;
         this.recipeDAO = recipeDAO;
         this.botStateContextDAO = botStateContextDAO;
         this.botConfig = botConfig;
+        this.inlineKeyboardMaker = inlineKeyboardMaker;
     }
 
     public BotApiMethod<?> handle(Update update) {
@@ -49,7 +52,8 @@ public class InlineQueryHandler implements UpdateHandler {
         BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(inlineQuery.getFrom().getId());
 
         if (query.contains("/edit_recipe")) {
-            SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("Сотрите имя бота и отправьте отредактированный рецепт \uD83D\uDC47").build();
+            SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("Сотрите имя бота и отправьте отредактированный рецепт \uD83D\uDC47")
+                    .replyMarkup(inlineKeyboardMaker.getCancelKeyboard()).build();
             try {
                 telegramClient.execute(sendMessage);
             } catch (TelegramApiException e) {

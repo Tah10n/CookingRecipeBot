@@ -69,8 +69,6 @@ public class MessageHandler implements UpdateHandler {
 
             if (buttonActions.containsKey(inputText)) {
                 buttonActions.get(inputText).run();
-            } else if (inputText.equals("/send")) {
-                actionFactory.sendTextMessage(chatId, "sended");
             } else {
                 switch (botStateContext.getCurrentBotState()) {
                     case DEFAULT:
@@ -203,6 +201,7 @@ public class MessageHandler implements UpdateHandler {
             return sendMessage;
         }
 
+        recipe.setDateOfLastEdit(new Date());
         recipeDAO.saveRecipe(recipe);
         sendMessage.setText("Видео обновлено");
 
@@ -239,6 +238,7 @@ public class MessageHandler implements UpdateHandler {
             recipeToEdit.setInstructions(recipe.getInstructions());
             recipeToEdit.setHashtags(recipe.getHashtags());
             recipeToEdit.setMessageEntities(messageEntities);
+            recipeToEdit.setDateOfLastEdit(new Date());
 
             recipeDAO.saveRecipe(recipeToEdit);
             sendMessage.setText("Рецепт изменен");
@@ -271,6 +271,7 @@ public class MessageHandler implements UpdateHandler {
                 .orElse("") : null;
         recipe.setPhotoId(fileId);
         recipe.setThumbnailId(thumbnailId);
+        recipe.setDateOfLastEdit(new Date());
         recipeDAO.saveRecipe(recipe);
         sendMessage.setText("Фото обновлено");
         try {
