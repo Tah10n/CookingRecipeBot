@@ -4,8 +4,8 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 
+import java.util.Date;
 import java.util.List;
 
 @Data
@@ -18,6 +18,8 @@ public class Recipe {
     private String description;
     private String ingredients;
     private String instructions;
+    private String text;
+    private Date dateOfCreation;
     private String thumbnailId;
     private String photoId;
     private String animationId;
@@ -29,6 +31,14 @@ public class Recipe {
 
     @Override
     public String toString() {
+        if (text != null) {
+            return text;
+        } else {
+            return generateText();
+        }
+    }
+
+    private String generateText() {
         StringBuilder sb = new StringBuilder();
         sb.append(name.toUpperCase()).append("\n");
         String[] ingredientsArray = ingredients.split("\n");
@@ -43,4 +53,5 @@ public class Recipe {
 
         return sb.toString();
     }
+
 }

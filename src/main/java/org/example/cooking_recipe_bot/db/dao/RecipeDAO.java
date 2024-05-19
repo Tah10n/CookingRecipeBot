@@ -4,65 +4,61 @@ import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.repository.RecipesRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class RecipeDAO {
     private RecipesRepository recipesRepository;
+    private final Random random = new Random();
+    private Map<String, Recipe> recipesCache;
 
     public RecipeDAO(RecipesRepository recipesRepository) {
         this.recipesRepository = recipesRepository;
+
+        recipesCache = new HashMap<>();
+        recipesCache.putAll(recipesRepository.findAll().stream().collect(Collectors.toMap(Recipe::getId, recipe -> recipe)));
     }
 
-    public List<Recipe> findRecipeByNameLikeIgnoreCase(String name) {
-        return recipesRepository.findRecipesByNameContainsIgnoreCase(name);
-    }
 
     public Recipe findRecipeByNameEqualsIgnoreCase(String name) {
         return recipesRepository.findRecipesByNameEqualsIgnoreCase(name);
     }
 
     public Recipe saveRecipe(Recipe recipe) {
+        updateCache(recipe);
         return recipesRepository.save(recipe);
 
-    }
-
-    public Recipe getRandomRecipe() {
-        //todo get rnd from db
-        List<Recipe> recipes = recipesRepository.findAll();
-        if(recipes.isEmpty()) return null;
-        int index = (int) (Math.random() * recipes.size());
-        return recipes.get(index);
     }
 
     public void deleteRecipe(String recipeId) {
+        recipesCache.remove(recipeId);
         recipesRepository.deleteRecipeById(recipeId);
     }
 
-    public List<Recipe> findAllRecipes() {
-        return recipesRepository.findAll();
+    private void updateCache(Recipe recipe) {
+        recipesCache.put(recipe.getId(), recipe);
     }
 
-
-    public Recipe updateRecipe(Recipe recipe) {
-        return recipesRepository.save(recipe);
+    public Recipe getRandomRecipe() {
+        int randomIndex = random.nextInt(recipesCache.size());
+        List<Recipe> recipes = new ArrayList<>(recipesCache.values());
+        return recipes.get(randomIndex);
     }
 
-    public List<Recipe> findRecipesByHashtags(String hashtag) {
-        return recipesRepository.findRecipesByHashtagsContainsIgnoreCase(hashtag);
-
-    }
 
     public List<Recipe> findRecipesByString(String string) {
-        Set<Recipe> recipes = new HashSet<>();
+        Set<Recipe> result = new HashSet<>();
         string = string.toLowerCase();
-        recipesRepository.findRecipesByNameContainsIgnoreCase(string).forEach(recipes::add);
-        recipesRepository.findRecipesByHashtagsContainsIgnoreCase(string).forEach(recipes::add);
-        recipesRepository.findRecipesByIngredientsContainsIgnoreCase(string).forEach(recipes::add);
-        return recipes.stream().toList();
+        for (Recipe recipe : recipesCache.values()) {
+            if ((recipe.getText() != null && recipe.getText().toLowerCase().contains(string)) ||
+                    (recipe.getName() != null && recipe.getName().toLowerCase().contains(string)) ||
+                    (recipe.getHashtags() != null && recipe.getHashtags().toLowerCase().contains(string)) ||
+                    (recipe.getIngredients() != null && recipe.getIngredients().toLowerCase().contains(string))) {
+                result.add(recipe);
+            }
+        }
+        return new ArrayList<>(result);
     }
 
     public Recipe findRecipeById(String recipeId) {

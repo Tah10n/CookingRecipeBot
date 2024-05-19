@@ -1,21 +1,17 @@
 package org.example.cooking_recipe_bot.bot.handlers;
 
-import jakarta.servlet.MultipartConfigElement;
 import java.util.Arrays;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
-import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.config.BotConfig;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
-import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
-import org.telegram.telegrambots.meta.api.methods.GetMe;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -34,16 +30,12 @@ import java.util.Set;
 @Slf4j
 @Service
 public class InlineQueryHandler implements UpdateHandler {
-    UserDAO userDAO;
-    InlineKeyboardMaker inlineKeyboardMaker;
-    TelegramClient telegramClient;
-    RecipeDAO recipeDAO;
-    BotStateContextDAO botStateContextDAO;
-    BotConfig botConfig;
+    private final TelegramClient telegramClient;
+    private final RecipeDAO recipeDAO;
+    private final BotStateContextDAO botStateContextDAO;
+    private final BotConfig botConfig;
 
-    public InlineQueryHandler(UserDAO userDAO, InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig) {
-        this.userDAO = userDAO;
-        this.inlineKeyboardMaker = inlineKeyboardMaker;
+    public InlineQueryHandler(TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig) {
         this.telegramClient = telegramClient;
         this.recipeDAO = recipeDAO;
         this.botStateContextDAO = botStateContextDAO;
@@ -62,7 +54,7 @@ public class InlineQueryHandler implements UpdateHandler {
                 telegramClient.execute(sendMessage);
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
-                e.printStackTrace();
+                log.error(Arrays.toString(e.getStackTrace()));
             }
             botStateContext.setCurrentBotState(BotState.WAITING_FOR_EDITED_RECIPE);
             botStateContextDAO.saveBotStateContext(botStateContext);

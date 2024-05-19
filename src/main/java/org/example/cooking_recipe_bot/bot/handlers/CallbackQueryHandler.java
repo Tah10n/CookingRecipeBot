@@ -45,10 +45,10 @@ import java.util.List;
 public class CallbackQueryHandler implements UpdateHandler {
     private final UserDAO userDAO;
     private final ActionFactory actionFactory;
-    InlineKeyboardMaker inlineKeyboardMaker;
-    TelegramClient telegramClient;
-    RecipeDAO recipeDAO;
-    BotStateContextDAO botStateContextDAO;
+    private final InlineKeyboardMaker inlineKeyboardMaker;
+    private final TelegramClient telegramClient;
+    private final RecipeDAO recipeDAO;
+    private final BotStateContextDAO botStateContextDAO;
 
     public CallbackQueryHandler(InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, UserDAO userDAO, ActionFactory actionFactory) {
 
@@ -135,7 +135,6 @@ public class CallbackQueryHandler implements UpdateHandler {
                 List<MessageEntity> messageEntities = new ArrayList<>();
                 if(recipe.getMessageEntities() != null) {
                     messageEntities = MessageEntityMapper.mapToMessageEntities(recipe.getMessageEntities());
-                    log.debug("messageEntities=" + messageEntities);
                 }
                 if (opened == 0) {
                     if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {

@@ -1,5 +1,6 @@
 package org.example.cooking_recipe_bot.utils;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,22 +9,26 @@ import java.text.ParseException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class RecipeParser {
-    private static final Logger log = LoggerFactory.getLogger(RecipeParser.class);
+    private RecipeParser() {
+    }
 
     public static Recipe parseRecipeFromString(String recipeString) throws ParseException {
-        if(recipeString == null) {
+        if (recipeString == null) {
             throw new ParseException("Recipe string is null", 0);
         }
 
         // Extract the recipe name
         String[] lines = recipeString.split("\n");
         if (lines.length == 0) {
-            throw new ParseException("Recipe string is empty", 0);
+            throw new ParseException("Recipe string has no lines", 0);
         }
         Recipe recipe = new Recipe();
+        recipe.setText(recipeString);
+
         String name = lines[0].trim().toLowerCase().replaceAll("[.]", "");
-        if(name.length() > 100) {
+        if (name.length() > 100) {
             throw new ParseException("Recipe name is too long", recipeString.lastIndexOf(name));
         }
         recipe.setName(name);
@@ -38,9 +43,8 @@ public class RecipeParser {
                 ingredientsBuilder.append(ingredient).append("\n");
             }
         }
-        if(ingredientsBuilder.length() == 0) {
+        if (ingredientsBuilder.isEmpty()) {
             log.info("where is no ingredients in added recipe");
-            //throw new ParseException("Recipe string has no ingredients", recipeString.lastIndexOf(name));
         }
         recipe.setIngredients(ingredientsBuilder.toString().trim().toLowerCase());
 
@@ -52,7 +56,7 @@ public class RecipeParser {
             String instruction = instructionMatcher.group(1).trim();
             instructionsBuilder.append(instruction).append("\n");
         }
-        if(instructionsBuilder.length() == 0) {
+        if (instructionsBuilder.isEmpty()) {
             log.info("where is no instructions in added recipe");
             throw new ParseException("Recipe string has no instructions", recipeString.lastIndexOf(name));
         }
@@ -67,8 +71,7 @@ public class RecipeParser {
             String hashtag = hashtagsMatcher.group(1).trim();
             hashtagsBuilder.append(hashtag).append("\n");
         }
-        if(hashtagsBuilder.length() == 0) {
-            //throw new ParseException("Recipe string has no hashtags", recipeString.lastIndexOf(name));
+        if (hashtagsBuilder.isEmpty()) {
             log.info("where is no hashtags in added recipe");
         }
         recipe.setHashtags(hashtagsBuilder.toString().trim());

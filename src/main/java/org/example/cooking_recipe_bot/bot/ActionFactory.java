@@ -31,12 +31,12 @@ import java.util.Map;
 @Component
 public class ActionFactory {
     private final Map<String, Runnable> buttonActions = new HashMap<>();
-    BotStateContextDAO botStateContextDAO;
-    TelegramClient telegramClient;
-    UserDAO userDAO;
-    RecipeDAO recipeDAO;
-    ReplyKeyboardMaker replyKeyboardMaker;
-    InlineKeyboardMaker inlineKeyboardMaker;
+    private final BotStateContextDAO botStateContextDAO;
+    private final TelegramClient telegramClient;
+    private final UserDAO userDAO;
+    private final RecipeDAO recipeDAO;
+    private final ReplyKeyboardMaker replyKeyboardMaker;
+    private final InlineKeyboardMaker inlineKeyboardMaker;
 
     public ActionFactory(BotStateContextDAO botStateContextDAO, TelegramClient telegramClient, UserDAO userDAO, RecipeDAO recipeDAO, ReplyKeyboardMaker replyKeyboardMaker, InlineKeyboardMaker inlineKeyboardMaker) {
         this.botStateContextDAO = botStateContextDAO;
@@ -242,7 +242,7 @@ public class ActionFactory {
 
     }
 
-    private void sendTextMessage(Long chatId, String message) {
+    public void sendTextMessage(Long chatId, String message) {
         SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(message).build();
         try {
             telegramClient.execute(sendMessage);

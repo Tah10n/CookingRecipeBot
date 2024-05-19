@@ -4,8 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.ActionFactory;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
-import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
-import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
@@ -32,17 +30,13 @@ import java.util.*;
 @Service
 public class MessageHandler implements UpdateHandler {
     private final RecipeDAO recipeDAO;
-    ReplyKeyboardMaker replyKeyboardMaker;
-    InlineKeyboardMaker inlineKeyboardMaker;
-    UserDAO userDAO;
-    TelegramClient telegramClient;
-    BotStateContextDAO botStateContextDAO;
-    ActionFactory actionFactory;
+    private final UserDAO userDAO;
+    private final TelegramClient telegramClient;
+    private final BotStateContextDAO botStateContextDAO;
+    private final ActionFactory actionFactory;
 
 
-    public MessageHandler(ReplyKeyboardMaker replyKeyboardMaker, InlineKeyboardMaker inlineKeyboardMaker, UserDAO userDAO, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, ActionFactory actionFactory) {
-        this.replyKeyboardMaker = replyKeyboardMaker;
-        this.inlineKeyboardMaker = inlineKeyboardMaker;
+    public MessageHandler(UserDAO userDAO, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, ActionFactory actionFactory) {
         this.userDAO = userDAO;
         this.telegramClient = telegramClient;
         this.recipeDAO = recipeDAO;
@@ -75,6 +69,8 @@ public class MessageHandler implements UpdateHandler {
 
             if (buttonActions.containsKey(inputText)) {
                 buttonActions.get(inputText).run();
+            } else if (inputText.equals("/send")) {
+                actionFactory.sendTextMessage(chatId, "sended");
             } else {
                 switch (botStateContext.getCurrentBotState()) {
                     case DEFAULT:
@@ -207,7 +203,7 @@ public class MessageHandler implements UpdateHandler {
             return sendMessage;
         }
 
-        recipeDAO.updateRecipe(recipe);
+        recipeDAO.saveRecipe(recipe);
         sendMessage.setText("Видео обновлено");
 
         botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
@@ -221,7 +217,6 @@ public class MessageHandler implements UpdateHandler {
         int offset = inputText.lastIndexOf("///") + 3;
         if (update.getMessage().getEntities() != null) {
             messageEntities = MessageEntityMapper.mapToMyMessageEntities(update.getMessage().getEntities(), offset);
-            log.debug("messageEntities=" + messageEntities);
         }
 
         String[] split = inputText.split("///");
@@ -238,13 +233,14 @@ public class MessageHandler implements UpdateHandler {
             Long chatId = update.getMessage().getChatId();
             recipe = RecipeParser.parseRecipeFromString(recipeString);
             Recipe recipeToEdit = recipeDAO.findRecipeById(recipeId);
+            recipeToEdit.setText(recipe.getText());
             recipeToEdit.setName(recipe.getName());
             recipeToEdit.setIngredients(recipe.getIngredients());
             recipeToEdit.setInstructions(recipe.getInstructions());
             recipeToEdit.setHashtags(recipe.getHashtags());
             recipeToEdit.setMessageEntities(messageEntities);
 
-            recipeDAO.updateRecipe(recipeToEdit);
+            recipeDAO.saveRecipe(recipeToEdit);
             sendMessage.setText("Рецепт изменен");
             actionFactory.sendRecipesList(userId, chatId, List.of(recipeToEdit));
         } catch (ParseException e) {
@@ -275,7 +271,7 @@ public class MessageHandler implements UpdateHandler {
                 .orElse("") : null;
         recipe.setPhotoId(fileId);
         recipe.setThumbnailId(thumbnailId);
-        recipeDAO.updateRecipe(recipe);
+        recipeDAO.saveRecipe(recipe);
         sendMessage.setText("Фото обновлено");
         try {
             actionFactory.sendRecipesList(user.getId(), update.getMessage().getChatId(), List.of(recipe));
@@ -292,12 +288,12 @@ public class MessageHandler implements UpdateHandler {
 
         if (update.getMessage().getEntities() != null) {
             messageEntities = MessageEntityMapper.mapToMyMessageEntities(update.getMessage().getEntities(), 0);
-            log.debug("messageEntities=" + messageEntities);
         }
         String inputText = update.getMessage().hasText() ? update.getMessage().getText() : update.getMessage().getCaption();
         Recipe recipe;
         try {
             recipe = RecipeParser.parseRecipeFromString(inputText);
+            recipe.setDateOfCreation(new Date());
         } catch (ParseException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
