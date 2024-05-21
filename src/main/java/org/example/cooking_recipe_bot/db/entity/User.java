@@ -18,13 +18,10 @@ public class User {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("id=").append(id).append(", ");
-        sb.append("userName=").append(userName);
-        sb.append(", firstName=").append(firstName);
-        sb.append(", lastName=").append(lastName);
-        sb.append(", isAdmin=").append(isAdmin);
-
-        return sb.toString();
+        return "id=" + id + ", " +
+                "userName=" + userName +
+                ", firstName=" + firstName +
+                ", lastName=" + lastName +
+                ", isAdmin=" + isAdmin;
     }
 }

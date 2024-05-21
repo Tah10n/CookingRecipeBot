@@ -129,7 +129,6 @@ public class ActionFactory {
         return () -> {
 
             botStateContextDAO.changeBotState(update.getMessage().getFrom().getId(), BotState.DEFAULT);
-
             Recipe randomRecipe = recipeDAO.getRandomRecipe();
             if (randomRecipe != null) {
                 try {
@@ -170,6 +169,8 @@ public class ActionFactory {
         return () -> {
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             long chatId = update.getMessage().getChatId();
+            user.setIsUnsubscribed(false);
+            userDAO.saveUser(user);
             String userName;
             if (user.getUserName() != null) {
                 userName = user.getUserName();
@@ -190,7 +191,7 @@ public class ActionFactory {
         List<User> allUsers = userDAO.findAllUsers();
 
         for (User user : allUsers) {
-            if (user.getUserName() != null && (userDAO.isFirstAdmin(user.getUserName()) || user.getUserName().equals(update.getMessage().getFrom().getUserName()))) {
+            if (user.getUserName() != null && (userDAO.isFirstAdmin(user.getUserName()) || user.getId().equals(update.getMessage().getFrom().getId()))) {
                 continue;
             }
             SendMessage sendMessage = SendMessage.builder().chatId(update.getMessage().getChatId()).text(user.toString()).build();

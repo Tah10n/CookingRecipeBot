@@ -9,9 +9,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class RecipeDAO {
-    private RecipesRepository recipesRepository;
+    private final RecipesRepository recipesRepository;
     private final Random random = new Random();
-    private Map<String, Recipe> recipesCache;
+    private final Map<String, Recipe> recipesCache;
 
     public RecipeDAO(RecipesRepository recipesRepository) {
         this.recipesRepository = recipesRepository;
@@ -42,8 +42,12 @@ public class RecipeDAO {
 
     public Recipe getRandomRecipe() {
         int randomIndex = random.nextInt(recipesCache.size());
-        List<Recipe> recipes = new ArrayList<>(recipesCache.values());
-        return recipes.get(randomIndex);
+        Iterator<String> iterator = recipesCache.keySet().iterator();
+        for (int i = 0; i < randomIndex-1; i++) {
+            iterator.next();
+        }
+        return recipesCache.get(iterator.next());
+
     }
 
 

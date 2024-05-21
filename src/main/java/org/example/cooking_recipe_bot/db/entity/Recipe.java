@@ -32,7 +32,7 @@ public class Recipe {
 
     @Override
     public String toString() {
-        if (text != null) {
+        if (text != null && !text.isEmpty()) {
             return text;
         } else {
             return generateText();

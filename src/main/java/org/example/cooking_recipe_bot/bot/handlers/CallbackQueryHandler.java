@@ -38,6 +38,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -61,7 +62,7 @@ public class CallbackQueryHandler implements UpdateHandler {
     }
 
     @Override
-    public BotApiMethod<?> handle(Update update) throws TelegramApiException {
+    public BotApiMethod<?> handle(Update update) {
         final CallbackQuery callbackQuery = update.getCallbackQuery();
         if (callbackQuery == null) {
             log.error(this.getClass().getName() + " No callback query in update");
@@ -80,48 +81,78 @@ public class CallbackQueryHandler implements UpdateHandler {
                 long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " удален").build();
                 DeleteMessage deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                telegramClient.execute(sendMessage);
-                telegramClient.execute(deleteMessage);
+                try {
+                    telegramClient.execute(sendMessage);
+                    telegramClient.execute(deleteMessage);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
                 userDAO.deleteUser(userIdFromMessage);
                 break;
             case ("set_admin_button"):
                 userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
                 userDAO.setAdmin(userIdFromMessage);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " стал администратором").build();
-                telegramClient.execute(sendMessage);
                 EditMessageText editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId)
                         .text(userDAO.getUserById(userIdFromMessage).toString()).replyMarkup(inlineKeyboardMaker.getUserKeyboard(userIdFromMessage, true)).build();
-                telegramClient.execute(editMessageText);
+                try {
+                    telegramClient.execute(sendMessage);
+                    telegramClient.execute(editMessageText);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
                 break;
             case ("unset_admin_button"):
                 userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
                 userDAO.unsetAdmin(userIdFromMessage);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Пользователь " + userDAO.getUserById(userIdFromMessage).getUserName() + " больше не администратор").build();
-                telegramClient.execute(sendMessage);
                 editMessageText = EditMessageText.builder().chatId(chatId).messageId(messageId)
                         .text(userDAO.getUserById(userIdFromMessage).toString()).replyMarkup(inlineKeyboardMaker.getUserKeyboard(userIdFromMessage, false)).build();
-                telegramClient.execute(editMessageText);
+                try {
+                    telegramClient.execute(sendMessage);
+                    telegramClient.execute(editMessageText);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
                 break;
             case ("delete_recipe_button"):
 
                 SendMessage questionMessage = SendMessage.builder().chatId(chatId)
                         .text("Вы уверены, что хотите удалить рецепт " + recipeDAO.findRecipeById(recipeId).getName() + " ?")
                         .replyMarkup(inlineKeyboardMaker.getYesOrNoForDeleteRecipeKeyboard(recipeId)).build();
-                telegramClient.execute(questionMessage);
+                try {
+                    telegramClient.execute(questionMessage);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
                 break;
             case ("yes_for_delete_recipe_button"):
                 recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
                 recipeDAO.deleteRecipe(recipeId);
 
                 DeleteMessage deleteMessage1 = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                telegramClient.execute(deleteMessage1);
 
                 sendMessage = SendMessage.builder().chatId(chatId).text("Рецепт удален").build();
-                telegramClient.execute(sendMessage);
+                try {
+                    telegramClient.execute(deleteMessage1);
+                    telegramClient.execute(sendMessage);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
                 break;
             case ("no_for_delete_recipe_button"):
                 DeleteMessage deleteMessage2 = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                telegramClient.execute(deleteMessage2);
+                try {
+                    telegramClient.execute(deleteMessage2);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
                 break;
             case ("open_recipe_button"):
                 int opened = Integer.parseInt(callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1, callbackQuery.getData().lastIndexOf(":")));
@@ -141,32 +172,52 @@ public class CallbackQueryHandler implements UpdateHandler {
                         if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
                             EditMessageMedia editMessageMedia = EditMessageMedia.builder().chatId(chatId).messageId(messageId - 1)
                                     .media(new InputMediaAnimation(recipe.getAnimationId())).build();
-                            telegramClient.execute(editMessageMedia);
+                            try {
+                                telegramClient.execute(editMessageMedia);
+                            } catch (TelegramApiException e) {
+                                log.error(e.getMessage());
+                                log.error(Arrays.toString(e.getStackTrace()));
+                            }
                         } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
                             EditMessageMedia editMessageMedia = EditMessageMedia.builder().chatId(chatId).messageId(messageId - 1)
                                     .media(new InputMediaVideo(recipe.getVideoId())).build();
-                            telegramClient.execute(editMessageMedia);
+                            try {
+                                telegramClient.execute(editMessageMedia);
+                            } catch (TelegramApiException e) {
+                                log.error(e.getMessage());
+                                log.error(Arrays.toString(e.getStackTrace()));
+                            }
                         }
                     } else {
                         if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
                             deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                            telegramClient.execute(deleteMessage);
                             SendAnimation sendAnimation = SendAnimation.builder().chatId(chatId)
                                     .animation(new InputFile(recipe.getAnimationId())).build();
                             sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString())
                                     .entities(messageEntities).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
-                            telegramClient.execute(sendAnimation);
-                            telegramClient.execute(sendMessage);
+                            try {
+                                telegramClient.execute(deleteMessage);
+                                telegramClient.execute(sendAnimation);
+                                telegramClient.execute(sendMessage);
+                            } catch (TelegramApiException e) {
+                                log.error(e.getMessage());
+                                log.error(Arrays.toString(e.getStackTrace()));
+                            }
                             break;
                         } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
                             deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                            telegramClient.execute(deleteMessage);
                             SendVideo sendVideo = SendVideo.builder().chatId(chatId)
                                     .video(new InputFile(recipe.getVideoId())).build();
                             sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString())
                                     .entities(messageEntities).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
-                            telegramClient.execute(sendVideo);
-                            telegramClient.execute(sendMessage);
+                            try {
+                                telegramClient.execute(deleteMessage);
+                                telegramClient.execute(sendVideo);
+                                telegramClient.execute(sendMessage);
+                            } catch (TelegramApiException e) {
+                                log.error(e.getMessage());
+                                log.error(Arrays.toString(e.getStackTrace()));
+                            }
                             break;
                         }
                     }
@@ -177,7 +228,12 @@ public class CallbackQueryHandler implements UpdateHandler {
                     editMessageTextFromOpenButton = getEditMessageTextFromOpenButton(recipe, chatId, messageId, userId);
 
                 }
-                telegramClient.execute(editMessageTextFromOpenButton);
+                try {
+                    telegramClient.execute(editMessageTextFromOpenButton);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
 
                 break;
             case ("change_photo_button"):
@@ -185,7 +241,12 @@ public class CallbackQueryHandler implements UpdateHandler {
                 recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое фото или напишите delete если хотите удалить фото")
                         .replyMarkup(inlineKeyboardMaker.getCancelKeyboard()).build();
-                telegramClient.execute(sendMessage);
+                try {
+                    telegramClient.execute(sendMessage);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
 
                 botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_PHOTO, recipeId);
 
@@ -195,7 +256,12 @@ public class CallbackQueryHandler implements UpdateHandler {
                 recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
                 sendMessage = SendMessage.builder().chatId(chatId).text("Отправьте новое видео или напишите delete если хотите удалить видео")
                         .replyMarkup(inlineKeyboardMaker.getCancelKeyboard()).build();
-                telegramClient.execute(sendMessage);
+                try {
+                    telegramClient.execute(sendMessage);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
 
                 botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_VIDEO, recipeId);
                 break;
@@ -203,12 +269,22 @@ public class CallbackQueryHandler implements UpdateHandler {
                 BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(userId);
                 List<Recipe> recipes = botStateContext.getRecipeList();
                 deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                telegramClient.execute(deleteMessage);
-                actionFactory.sendRecipesList(userId, chatId, recipes);
+                try {
+                    telegramClient.execute(deleteMessage);
+                    actionFactory.sendRecipesList(userId, chatId, recipes);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
                 break;
             case ("cancel_button"):
                 deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                telegramClient.execute(deleteMessage);
+                try {
+                    telegramClient.execute(deleteMessage);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
                 botStateContextDAO.changeBotState(userId, BotState.DEFAULT);
                 break;
             case ("rate_button"):
@@ -218,7 +294,12 @@ public class CallbackQueryHandler implements UpdateHandler {
                 InlineKeyboardMarkup inlineKeyboardMarkupChanged = changeToRatingButtons(inlineKeyboardMarkup, recipeId);
                 EditMessageReplyMarkup editMessageReplyMarkup = EditMessageReplyMarkup.builder()
                         .chatId(chatId).messageId(messageId).replyMarkup(inlineKeyboardMarkupChanged).build();
-                telegramClient.execute(editMessageReplyMarkup);
+                try {
+                    telegramClient.execute(editMessageReplyMarkup);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
                 break;
             case ("rate_1"):
                 rateRecipe(recipeId, userId, chatId, messageId, 1);
@@ -244,7 +325,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         return null;
     }
 
-    private @NotNull EditMessageText getEditMessageTextFromOpenButton(Recipe recipe, long chatId, int messageId, long userId) throws TelegramApiException {
+    private EditMessageText getEditMessageTextFromOpenButton(Recipe recipe, long chatId, int messageId, long userId) {
         DeleteMessage deleteMessage;
         EditMessageText editMessageTextFromOpenButton;
         if ((recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) || (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty())) {
@@ -252,10 +333,20 @@ public class CallbackQueryHandler implements UpdateHandler {
                 EditMessageMedia editMessageMedia = EditMessageMedia.builder().chatId(chatId).messageId(messageId - 1)
                         .media(new InputMediaPhoto(recipe.getPhotoId())).build();
 
-                telegramClient.execute(editMessageMedia);
+                try {
+                    telegramClient.execute(editMessageMedia);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
             } else {
                 deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId - 1).build();
-                telegramClient.execute(deleteMessage);
+                try {
+                    telegramClient.execute(deleteMessage);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
             }
 
         }
@@ -267,7 +358,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         return editMessageTextFromOpenButton;
     }
 
-    private void rateRecipe(String recipeId, long userId, long chatId, int messageId, int ratingFromUser) throws TelegramApiException {
+    private void rateRecipe(String recipeId, long userId, long chatId, int messageId, int ratingFromUser)  {
         EditMessageText editMessageText;
         Recipe recipe;
         recipe = recipeDAO.findRecipeById(recipeId);
@@ -285,7 +376,12 @@ public class CallbackQueryHandler implements UpdateHandler {
         recipe.setVotedUsersIds(votedUsersIds);
         recipeDAO.saveRecipe(recipe);
         editMessageText = getEditMessageTextFromOpenButton(recipe, chatId, messageId, userId);
-        telegramClient.execute(editMessageText);
+        try {
+            telegramClient.execute(editMessageText);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+        }
     }
 
     private InlineKeyboardMarkup changeToRatingButtons(InlineKeyboardMarkup inlineKeyboardMarkup, String recipeId) {

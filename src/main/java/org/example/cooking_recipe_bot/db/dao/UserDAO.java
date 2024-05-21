@@ -5,14 +5,11 @@ import org.example.cooking_recipe_bot.db.entity.User;
 import org.example.cooking_recipe_bot.db.repository.UsersRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class UserDAO {
     private final String botOwner;
-
     private final UsersRepository usersRepository;
 
     public UserDAO(UsersRepository usersRepository, BotConfig botConfig) {
@@ -27,10 +24,6 @@ public class UserDAO {
 
     public void deleteUser(long userId) {
         usersRepository.deleteById(userId);
-    }
-
-    public User getUserByUserName(String userName) {
-        return usersRepository.findByUserName(userName);
     }
 
     public User getUserById(long userId) {
@@ -50,9 +43,8 @@ public class UserDAO {
         List<User> all = usersRepository.findAll();
         List<User> result = new ArrayList<>();
         for (User user : all) {
-            if (user.getIsUnsubscribed() != null && user.getIsUnsubscribed()) {
-                continue;
-            } else {
+            if (!(user.getIsUnsubscribed() != null && user.getIsUnsubscribed())) {
+
                 result.add(user);
             }
         }
