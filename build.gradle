@@ -49,6 +49,7 @@ dependencies {
     implementation 'org.telegram:telegrambots-client:7.2.1'
 
     implementation 'org.apache.commons:commons-lang3:3.14.0'
+    implementation group: 'org.json', name: 'json', version: '20240303'
 }
 
 tasks.named('test') {

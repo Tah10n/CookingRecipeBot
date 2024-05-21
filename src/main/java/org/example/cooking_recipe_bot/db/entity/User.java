@@ -15,6 +15,15 @@ public class User {
     private Boolean isAdmin;
     private Long chatId;
     private Boolean isUnsubscribed;
+    private String language;
+
+    public String getLanguage() {
+        if(language == null || language.isEmpty()) {
+            return "en";
+        } else {
+            return language;
+        }
+    }
 
     @Override
     public String toString() {

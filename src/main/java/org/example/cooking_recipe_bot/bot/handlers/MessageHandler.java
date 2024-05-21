@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.ActionFactory;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
+import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
@@ -26,6 +27,8 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 import java.text.ParseException;
 import java.util.*;
 
+import static org.example.cooking_recipe_bot.bot.constants.BotMessageEnum.*;
+
 @Slf4j
 @Service
 public class MessageHandler implements UpdateHandler {
@@ -34,14 +37,16 @@ public class MessageHandler implements UpdateHandler {
     private final TelegramClient telegramClient;
     private final BotStateContextDAO botStateContextDAO;
     private final ActionFactory actionFactory;
+    private final MessageTranslator messageTranslator;
 
 
-    public MessageHandler(UserDAO userDAO, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, ActionFactory actionFactory) {
+    public MessageHandler(UserDAO userDAO, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, ActionFactory actionFactory, MessageTranslator messageTranslator) {
         this.userDAO = userDAO;
         this.telegramClient = telegramClient;
         this.recipeDAO = recipeDAO;
         this.botStateContextDAO = botStateContextDAO;
         this.actionFactory = actionFactory;
+        this.messageTranslator = messageTranslator;
     }
 
     @Override
@@ -62,7 +67,7 @@ public class MessageHandler implements UpdateHandler {
         long chatId = message.getChatId();
         SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("").build();
 
-        Map<String, Runnable> buttonActions = actionFactory.createButtonActions(update, user);
+        Map<String, Runnable> buttonActions = actionFactory.createButtonActions(user, chatId);
 
         if (message.hasText()) {
             String inputText = message.getText().toLowerCase();
@@ -95,14 +100,9 @@ public class MessageHandler implements UpdateHandler {
 
     private void handleDefaultState(Update update, String inputText) {
         List<Recipe> recipes = recipeDAO.findRecipesByString(inputText);
-        try {
-            long userId = update.getMessage().getFrom().getId();
-            long chatId = update.getMessage().getChatId();
-            actionFactory.sendRecipesList(userId, chatId, recipes);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
-        }
+        long userId = update.getMessage().getFrom().getId();
+        long chatId = update.getMessage().getChatId();
+        actionFactory.sendRecipesList(userId, chatId, recipes);
     }
 
     private SendMessage handleWaitingForPhotoState(SendMessage sendMessage, String inputText, User user) {
@@ -111,10 +111,10 @@ public class MessageHandler implements UpdateHandler {
             Recipe recipe = recipeDAO.findRecipeById(recipeId);
             recipe.setPhotoId(null);
             recipeDAO.saveRecipe(recipe);
-            sendMessage.setText("Фото удалено");
+            sendMessage.setText(messageTranslator.getMessage(PHOTO_WAS_DELETED_MESSAGE.name(),user.getLanguage()));
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         } else {
-            sendMessage.setText("Отправьте фото или напишите delete для его удаления");
+            sendMessage.setText(messageTranslator.getMessage(SEND_ME_PHOTO_MESSAGE.name(),user.getLanguage()));
         }
         return sendMessage;
     }
@@ -126,10 +126,10 @@ public class MessageHandler implements UpdateHandler {
             recipe.setVideoId(null);
             recipe.setAnimationId(null);
             recipeDAO.saveRecipe(recipe);
-            sendMessage.setText("Видео удалено");
+            sendMessage.setText(messageTranslator.getMessage(VIDEO_WAS_DELETED_MESSAGE.name(),user.getLanguage()));
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         } else {
-            sendMessage.setText("Отправьте видео или напишите delete для его удаления");
+            sendMessage.setText(messageTranslator.getMessage(SEND_ME_VIDEO_MESSAGE.name(),user.getLanguage()));
         }
         return sendMessage;
     }
@@ -137,7 +137,7 @@ public class MessageHandler implements UpdateHandler {
     private SendMessage handleNoTextState(BotStateContext botStateContext, SendMessage sendMessage, Update update, User user) {
         switch (botStateContext.getCurrentBotState()) {
             case DEFAULT:
-                sendMessage.setText("Отправьте ключевое слово или ингредиент для поиска рецептов");
+                sendMessage.setText(messageTranslator.getMessage(INSERT_KEYWORD_MESSAGE.name(),user.getLanguage()));
                 break;
             case ADDING_RECIPE:
                 return addNewRecipe(update, sendMessage, user);
@@ -182,7 +182,7 @@ public class MessageHandler implements UpdateHandler {
             }
         }
 
-        return SendMessage.builder().chatId(update.getMessage().getChatId()).text("Уведомление отправлено всем пользователям").build();
+        return SendMessage.builder().chatId(update.getMessage().getChatId()).text(messageTranslator.getMessage(BotMessageEnum.NOTIFICATION_WAS_SENT_MESSAGE.name(),update.getMessage().getFrom().getLanguageCode())).build();
     }
 
 
@@ -197,13 +197,13 @@ public class MessageHandler implements UpdateHandler {
             fileId = update.getMessage().getAnimation().getFileId();
             recipe.setAnimationId(fileId);
         } else {
-            sendMessage.setText("There is no video in this message");
+            sendMessage.setText(messageTranslator.getMessage(VIDEO_NOT_FOUND_MESSAGE.name(),user.getLanguage()));
             return sendMessage;
         }
 
         recipe.setDateOfLastEdit(new Date());
         recipeDAO.saveRecipe(recipe);
-        sendMessage.setText("Видео обновлено");
+        sendMessage.setText(messageTranslator.getMessage(VIDEO_UPDATED_MESSAGE.name(),user.getLanguage()));
 
         botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
@@ -220,7 +220,7 @@ public class MessageHandler implements UpdateHandler {
 
         String[] split = inputText.split("///");
         if (split.length != 3) {
-            sendMessage.setText("Неверный формат: не стирайте служебную строку /edit_recipe///...///");
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_UPDATING_FORMAT_ERROR.name(),user.getLanguage()));
             log.debug(this.getClass().getName() + " split.length=" + split.length);
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             return sendMessage;
@@ -241,16 +241,13 @@ public class MessageHandler implements UpdateHandler {
             recipeToEdit.setDateOfLastEdit(new Date());
 
             recipeDAO.saveRecipe(recipeToEdit);
-            sendMessage.setText("Рецепт изменен");
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_UPDATED_MESSAGE.name(),user.getLanguage()));
             actionFactory.sendRecipesList(userId, chatId, List.of(recipeToEdit));
         } catch (ParseException e) {
-            sendMessage.setText(BotMessageEnum.RECIPE_PARSING_ERROR.getMessage() + e.getMessage());
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_PARSING_ERROR.name(),user.getLanguage()) + e.getMessage());
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
 
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
         } finally {
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         }
@@ -273,13 +270,8 @@ public class MessageHandler implements UpdateHandler {
         recipe.setThumbnailId(thumbnailId);
         recipe.setDateOfLastEdit(new Date());
         recipeDAO.saveRecipe(recipe);
-        sendMessage.setText("Фото обновлено");
-        try {
-            actionFactory.sendRecipesList(user.getId(), update.getMessage().getChatId(), List.of(recipe));
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
-        }
+        sendMessage.setText(messageTranslator.getMessage(PHOTO_UPDATED_MESSAGE.name(),user.getLanguage()));
+        actionFactory.sendRecipesList(user.getId(), update.getMessage().getChatId(), List.of(recipe));
         botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
     }
@@ -298,12 +290,12 @@ public class MessageHandler implements UpdateHandler {
         } catch (ParseException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
-            sendMessage.setText(BotMessageEnum.RECIPE_PARSING_ERROR.getMessage() + e.getMessage());
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_PARSING_ERROR.name(),user.getLanguage()) + e.getMessage());
             return sendMessage;
         }
 
         if (checkIsRecipeAlreadyExists(recipe)) {
-            sendMessage.setText(BotMessageEnum.RECIPE_ALREADY_EXISTS.getMessage());
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_ALREADY_EXISTS_MESSAGE.name(),user.getLanguage()));
         } else {
 
             if (update.getMessage().hasPhoto()) {
@@ -322,18 +314,12 @@ public class MessageHandler implements UpdateHandler {
             recipe.setMessageEntities(messageEntities);
             Recipe savedRecipe = recipeDAO.saveRecipe(recipe);
 
-            try {
                 Long userId = user.getId();
                 Long chatId = update.getMessage().getChatId();
                 actionFactory.sendRecipesList(userId, chatId, List.of(savedRecipe));
-                sendMessage.setText(BotMessageEnum.RECIPE_ADDED.getMessage());
-            } catch (TelegramApiException e) {
-                log.error(e.getMessage());
-                log.error(Arrays.toString(e.getStackTrace()));
-                sendMessage.setText(BotMessageEnum.RECIPE_SENDING_ERROR.getMessage());
-            } finally {
+                sendMessage.setText(messageTranslator.getMessage(RECIPE_ADDED_MESSAGE.name(),user.getLanguage()));
+
                 botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
-            }
         }
 
         return sendMessage;
@@ -367,6 +353,7 @@ public class MessageHandler implements UpdateHandler {
         user.setUserName(userName);
         user.setIsAdmin(userDAO.isFirstAdmin(userName));
         user.setChatId(update.getMessage().getChatId());
+        user.setLanguage(update.getMessage().getFrom().getLanguageCode());
         userDAO.saveUser(user);
         return user;
     }

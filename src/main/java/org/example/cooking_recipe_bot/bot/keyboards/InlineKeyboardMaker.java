@@ -1,7 +1,9 @@
 package org.example.cooking_recipe_bot.bot.keyboards;
 
 import org.example.cooking_recipe_bot.bot.constants.ButtonNameEnum;
+import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
+import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
@@ -13,37 +15,43 @@ import java.util.List;
 
 @Component
 public class InlineKeyboardMaker {
-    public InlineKeyboardMarkup getUserKeyboard(Long userId, boolean isAdmin) {
-        if (isAdmin) {
+    private final MessageTranslator messageTranslator;
+
+    public InlineKeyboardMaker(MessageTranslator messageTranslator) {
+        this.messageTranslator = messageTranslator;
+    }
+
+    public InlineKeyboardMarkup getUserKeyboard(User requester, User user) {
+        if (Boolean.TRUE.equals(user.getIsAdmin())) {
             return InlineKeyboardMarkup.builder()
                     .keyboardRow(new InlineKeyboardRow(
-                            InlineKeyboardButton.builder().text("Удалить пользователя").callbackData("delete_user_button:" + userId).build(),
-                            InlineKeyboardButton.builder().text("Убрать из админов").callbackData("unset_admin_button:" + userId).build()
+                            InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.DELETE_USER.name(), requester.getLanguage())).callbackData("delete_user_button:" + user.getId()).build(),
+                            InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.UNSET_ADMIN.name(), requester.getLanguage())).callbackData("unset_admin_button:" + user.getId()).build()
                     )).build();
         } else {
             return InlineKeyboardMarkup.builder()
                     .keyboardRow(new InlineKeyboardRow(
-                            InlineKeyboardButton.builder().text("Удалить пользователя").callbackData("delete_user_button:" + userId).build(),
-                            InlineKeyboardButton.builder().text("Сделать админом").callbackData("set_admin_button:" + userId).build()
+                            InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.DELETE_USER.name(), requester.getLanguage())).callbackData("delete_user_button:" + user.getId()).build(),
+                            InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.SET_ADMIN.name(), requester.getLanguage())).callbackData("set_admin_button:" + user.getId()).build()
                     )).build();
         }
 
     }
 
-    public InlineKeyboardMarkup getRecipeKeyboard(Recipe recipe, int isOpened, boolean isAdmin) {
-        if (isAdmin) {
+    public InlineKeyboardMarkup getRecipeKeyboard(Recipe recipe, int isOpened, User user) {
+        if (Boolean.TRUE.equals(user.getIsAdmin())) {
             InlineKeyboardButton openButton;
             if (isOpened == 0) {
-                openButton = InlineKeyboardButton.builder().text("открыть").callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
+                openButton = InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.OPEN.name(), user.getLanguage())).callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
             } else {
-                openButton = InlineKeyboardButton.builder().text("закрыть").callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
+                openButton = InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.CLOSE.name(), user.getLanguage())).callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
             }
 
 
-            InlineKeyboardButton deleteButton = InlineKeyboardButton.builder().text("Удалить рецепт").callbackData("delete_recipe_button:" + recipe.getId()).build();
-            InlineKeyboardButton changePhotoButton = InlineKeyboardButton.builder().text("Изменить фото").callbackData("change_photo_button:" + recipe.getId()).build();
-            InlineKeyboardButton changeVideoButton = InlineKeyboardButton.builder().text("Изменить видео").callbackData("change_video_button:" + recipe.getId()).build();
-            InlineKeyboardButton editButton = InlineKeyboardButton.builder().text("Редактировать")
+            InlineKeyboardButton deleteButton = InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.DELETE_RECIPE.name(), user.getLanguage())).callbackData("delete_recipe_button:" + recipe.getId()).build();
+            InlineKeyboardButton changePhotoButton = InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.CHANGE_PHOTO.name(), user.getLanguage())).callbackData("change_photo_button:" + recipe.getId()).build();
+            InlineKeyboardButton changeVideoButton = InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.CHANGE_VIDEO.name(), user.getLanguage())).callbackData("change_video_button:" + recipe.getId()).build();
+            InlineKeyboardButton editButton = InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.EDIT_RECIPE.name(), user.getLanguage()))
                     .switchInlineQueryCurrentChat("/edit_recipe///" + recipe.getId() + "///" + recipe).build();
 
             return InlineKeyboardMarkup.builder()
@@ -53,9 +61,9 @@ public class InlineKeyboardMaker {
         } else {
             InlineKeyboardButton openButton;
             if (isOpened == 0) {
-                openButton = InlineKeyboardButton.builder().text("открыть").callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
+                openButton = InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.OPEN.name(), user.getLanguage())).callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
             } else {
-                openButton = InlineKeyboardButton.builder().text("закрыть").callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
+                openButton = InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.CLOSE.name(), user.getLanguage())).callbackData("open_recipe_button:" + isOpened + ":" + recipe.getId()).build();
             }
             return InlineKeyboardMarkup.builder()
                     .keyboardRow(new InlineKeyboardRow(openButton)).build();
@@ -63,8 +71,8 @@ public class InlineKeyboardMaker {
 
     }
 
-    public InlineKeyboardMarkup addRateButtonKeyboard(InlineKeyboardMarkup inlineKeyboardMarkup, Recipe recipe) {
-        InlineKeyboardButton rateButton = InlineKeyboardButton.builder().text("оценить")
+    public InlineKeyboardMarkup addRateButtonKeyboard(InlineKeyboardMarkup inlineKeyboardMarkup, Recipe recipe, User user) {
+        InlineKeyboardButton rateButton = InlineKeyboardButton.builder().text(messageTranslator.getMessage(ButtonNameEnum.RATE.name(), user.getLanguage()))
                 .callbackData("rate_button:" + recipe.getId()).build();
         List<InlineKeyboardRow> keyboardRows = new ArrayList<>(inlineKeyboardMarkup.getKeyboard());
         keyboardRows.add(new InlineKeyboardRow(rateButton));
@@ -74,17 +82,21 @@ public class InlineKeyboardMaker {
         return inlineKeyboardMarkup1;
     }
 
-    public ReplyKeyboard getMoreRecipesKeyboard() {
-        InlineKeyboardButton moreRecipesButton = InlineKeyboardButton.builder().text(ButtonNameEnum.MORE_RECIPES.getButtonName()).callbackData("more_recipes_button:").build();
-        InlineKeyboardButton cancelButton = InlineKeyboardButton.builder().text(ButtonNameEnum.CANCEL.getButtonName()).callbackData("cancel_button:").build();
+    public ReplyKeyboard getMoreRecipesKeyboard(User user) {
+        String moreRecipesButtonName = messageTranslator.getMessage(ButtonNameEnum.MORE_RECIPES.name(), user.getLanguage());
+        String cancelButtonName = messageTranslator.getMessage(ButtonNameEnum.CANCEL.name(), user.getLanguage());
+        InlineKeyboardButton moreRecipesButton = InlineKeyboardButton.builder().text(moreRecipesButtonName).callbackData("more_recipes_button:").build();
+        InlineKeyboardButton cancelButton = InlineKeyboardButton.builder().text(cancelButtonName).callbackData("cancel_button:").build();
 
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(cancelButton, moreRecipesButton)).build();
     }
 
-    public ReplyKeyboard getYesOrNoForDeleteRecipeKeyboard(String recipeId) {
-        InlineKeyboardButton yesButton = InlineKeyboardButton.builder().text(ButtonNameEnum.YES.getButtonName()).callbackData("yes_for_delete_recipe_button:" + recipeId).build();
-        InlineKeyboardButton noButton = InlineKeyboardButton.builder().text(ButtonNameEnum.NO.getButtonName()).callbackData("no_for_delete_recipe_button:" + recipeId).build();
+    public ReplyKeyboard getYesOrNoForDeleteRecipeKeyboard(User user, String recipeId) {
+        String yesButtonName = messageTranslator.getMessage(ButtonNameEnum.YES.name(), user.getLanguage());
+        String noButtonName = messageTranslator.getMessage(ButtonNameEnum.NO.name(), user.getLanguage());
+        InlineKeyboardButton yesButton = InlineKeyboardButton.builder().text(yesButtonName).callbackData("yes_for_delete_recipe_button:" + recipeId).build();
+        InlineKeyboardButton noButton = InlineKeyboardButton.builder().text(noButtonName).callbackData("no_for_delete_recipe_button:" + recipeId).build();
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(yesButton, noButton)).build();
     }
@@ -98,9 +110,19 @@ public class InlineKeyboardMaker {
         return new InlineKeyboardRow(oneButton, twoButton, threeButton, fourButton, fiveButton);
     }
 
-    public InlineKeyboardMarkup getCancelKeyboard() {
-        InlineKeyboardButton cancelButton = InlineKeyboardButton.builder().text(ButtonNameEnum.CANCEL.getButtonName()).callbackData("cancel_button:").build();
+    public InlineKeyboardMarkup getCancelKeyboard(User user) {
+        String cancelButtonName = messageTranslator.getMessage(ButtonNameEnum.CANCEL.name(), user.getLanguage());
+        InlineKeyboardButton cancelButton = InlineKeyboardButton.builder().text(cancelButtonName).callbackData("cancel_button:").build();
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(cancelButton)).build();
+    }
+
+    public InlineKeyboardMarkup getLanguagesKeyboard(User user) {
+        String languageRuButtonName = messageTranslator.getMessage(ButtonNameEnum.LANGUAGE_RU.name(), user.getLanguage());
+        String languageEnButtonName = messageTranslator.getMessage(ButtonNameEnum.LANGUAGE_EN.name(), user.getLanguage());
+        InlineKeyboardButton languageRuButton = InlineKeyboardButton.builder().text(languageRuButtonName).callbackData("language_ru_button:").build();
+        InlineKeyboardButton languageEnButton = InlineKeyboardButton.builder().text(languageEnButtonName).callbackData("language_en_button:").build();
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(languageRuButton, languageEnButton)).build();
     }
 }

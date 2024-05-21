@@ -18,8 +18,8 @@ public class UserDAO {
     }
 
 
-    public void saveUser(User user) {
-        usersRepository.save(user);
+    public User saveUser(User user) {
+        return usersRepository.save(user);
     }
 
     public void deleteUser(long userId) {
@@ -51,16 +51,16 @@ public class UserDAO {
         return result;
     }
 
-    public void setAdmin(long userId) {
+    public User setAdmin(long userId) {
         User user = usersRepository.findById(userId).get();
         user.setIsAdmin(true);
-        usersRepository.save(user);
+         return usersRepository.save(user);
     }
 
-    public void unsetAdmin(long userId) {
+    public User unsetAdmin(long userId) {
         User user = usersRepository.findById(userId).get();
         user.setIsAdmin(false);
-        usersRepository.save(user);
+        return usersRepository.save(user);
     }
 
 }

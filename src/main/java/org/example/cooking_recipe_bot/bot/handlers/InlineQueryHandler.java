@@ -4,12 +4,17 @@ import java.util.Arrays;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
+import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
+import org.example.cooking_recipe_bot.bot.constants.ButtonNameEnum;
+import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.config.BotConfig;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
+import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
+import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
@@ -36,24 +41,31 @@ public class InlineQueryHandler implements UpdateHandler {
     private final BotStateContextDAO botStateContextDAO;
     private final BotConfig botConfig;
     private final InlineKeyboardMaker inlineKeyboardMaker;
+    private final UserDAO userDAO;
+    private final MessageTranslator messageTranslator;
 
-    public InlineQueryHandler(TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig, InlineKeyboardMaker inlineKeyboardMaker) {
+    public InlineQueryHandler(TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig, InlineKeyboardMaker inlineKeyboardMaker, UserDAO userDAO, MessageTranslator messageTranslator) {
         this.telegramClient = telegramClient;
         this.recipeDAO = recipeDAO;
         this.botStateContextDAO = botStateContextDAO;
         this.botConfig = botConfig;
         this.inlineKeyboardMaker = inlineKeyboardMaker;
+        this.userDAO = userDAO;
+        this.messageTranslator = messageTranslator;
     }
 
     public BotApiMethod<?> handle(Update update) {
         InlineQuery inlineQuery = update.getInlineQuery();
         String query = inlineQuery.getQuery();
-        long chatId = inlineQuery.getFrom().getId();
+
+        User user = userDAO.getUserById(inlineQuery.getFrom().getId());
         BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(inlineQuery.getFrom().getId());
 
         if (query.contains("/edit_recipe")) {
-            SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("Сотрите имя бота и отправьте отредактированный рецепт \uD83D\uDC47")
-                    .replyMarkup(inlineKeyboardMaker.getCancelKeyboard()).build();
+            long chatId = inlineQuery.getFrom().getId();
+            String message = messageTranslator.getMessage(BotMessageEnum.WAITING_FOR_EDITED_RECIPE_MESSAGE.name(), user.getLanguage());
+            SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(message)
+                    .replyMarkup(inlineKeyboardMaker.getCancelKeyboard(user)).build();
             try {
                 telegramClient.execute(sendMessage);
             } catch (TelegramApiException e) {

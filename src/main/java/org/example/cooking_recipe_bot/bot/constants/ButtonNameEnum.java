@@ -1,31 +1,33 @@
 package org.example.cooking_recipe_bot.bot.constants;
 
 public enum ButtonNameEnum {
-    HELP_BUTTON("Помощь"),
-    FIND_RECIPE_BUTTON("Найти рецепт"),
-    BREAKFAST_BUTTON("Завтрак"),
-    LUNCH_BUTTON("Обед"),
-    DINNER_BUTTON("Ужин"),
-    FIFTEEN_MIN_BUTTON("15мин"),
-    THIRTY_MIN_BUTTON("30мин"),
-    ADD_RECIPE_BUTTON("Добавить рецепт"),
-    DELETE_RECIPE_BUTTON("Удалить рецепт"),
-    FIND_RANDOM_RECIPE_BUTTON("Найти случайный рецепт"),
-    USERS_BUTTON("Пользователи"),
-    SEND_NOTIFICATION("Уведомление"),
-    MORE_RECIPES("Еще рецепты"),
-    CANCEL("Отмена"),
-    YES("Да"),
-    NO("Нет");
-
-    private final String buttonName;
-
-    ButtonNameEnum(String buttonName) {
-        this.buttonName = buttonName;
-    }
-
-    public String getButtonName() {
-        return buttonName;
-    }
+    HELP_BUTTON,
+    FIND_RECIPE_BUTTON,
+    BREAKFAST_BUTTON,
+    LUNCH_BUTTON,
+    DINNER_BUTTON,
+    FIFTEEN_MIN_BUTTON,
+    THIRTY_MIN_BUTTON,
+    ADD_RECIPE_BUTTON,
+    DELETE_RECIPE_BUTTON,
+    FIND_RANDOM_RECIPE_BUTTON,
+    USERS_BUTTON,
+    SEND_NOTIFICATION,
+    MORE_RECIPES,
+    CANCEL,
+    YES,
+    NO,
+    OPEN,
+    CLOSE,
+    DELETE_USER,
+    SET_ADMIN,
+    UNSET_ADMIN,
+    EDIT_RECIPE,
+    DELETE_RECIPE,
+    CHANGE_PHOTO,
+    CHANGE_VIDEO,
+    RATE,
+    LANGUAGE_RU,
+    LANGUAGE_EN
 
 }
