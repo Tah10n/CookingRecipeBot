@@ -5,12 +5,11 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
-import org.example.cooking_recipe_bot.bot.constants.ButtonNameEnum;
 import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.config.BotConfig;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
-import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
+import org.example.cooking_recipe_bot.db.dao.RecipeManager;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
@@ -37,16 +36,16 @@ import java.util.Set;
 @Service
 public class InlineQueryHandler implements UpdateHandler {
     private final TelegramClient telegramClient;
-    private final RecipeDAO recipeDAO;
+    private final RecipeManager recipeManager;
     private final BotStateContextDAO botStateContextDAO;
     private final BotConfig botConfig;
     private final InlineKeyboardMaker inlineKeyboardMaker;
     private final UserDAO userDAO;
     private final MessageTranslator messageTranslator;
 
-    public InlineQueryHandler(TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, BotConfig botConfig, InlineKeyboardMaker inlineKeyboardMaker, UserDAO userDAO, MessageTranslator messageTranslator) {
+    public InlineQueryHandler(TelegramClient telegramClient, RecipeManager recipeManager, BotStateContextDAO botStateContextDAO, BotConfig botConfig, InlineKeyboardMaker inlineKeyboardMaker, UserDAO userDAO, MessageTranslator messageTranslator) {
         this.telegramClient = telegramClient;
-        this.recipeDAO = recipeDAO;
+        this.recipeManager = recipeManager;
         this.botStateContextDAO = botStateContextDAO;
         this.botConfig = botConfig;
         this.inlineKeyboardMaker = inlineKeyboardMaker;
@@ -77,7 +76,7 @@ public class InlineQueryHandler implements UpdateHandler {
             return null;
         } else {
             try {
-                Collection<? extends InlineQueryResult> inlineQueryResultList = getInlineQueryResultList(query);
+                Collection<? extends InlineQueryResult> inlineQueryResultList = getInlineQueryResultList(query, user.getLanguage());
                 String id = inlineQuery.getId();
                 telegramClient.execute(AnswerInlineQuery.builder().inlineQueryId(id).results(inlineQueryResultList).build());
             } catch (TelegramApiException e) {
@@ -90,10 +89,10 @@ public class InlineQueryHandler implements UpdateHandler {
         return null;
     }
 
-    private Collection<? extends InlineQueryResult> getInlineQueryResultList(String query) {
+    private Collection<? extends InlineQueryResult> getInlineQueryResultList(String query, String language) {
         Set<InlineQueryResult> inlineQueryResults = new HashSet<>();
 
-        List<Recipe> recipes = recipeDAO.findRecipesByString(query);
+        List<Recipe> recipes = recipeManager.getRecipeDAO(language).findRecipesByString(query);
 
         for (Recipe recipe : recipes) {
 

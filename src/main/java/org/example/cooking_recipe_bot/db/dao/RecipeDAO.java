@@ -1,53 +1,63 @@
 package org.example.cooking_recipe_bot.db.dao;
 
 import org.example.cooking_recipe_bot.db.entity.Recipe;
-import org.example.cooking_recipe_bot.db.repository.RecipesRepository;
+import org.example.cooking_recipe_bot.db.repository.RecipeRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class RecipeDAO {
-    private final RecipesRepository recipesRepository;
+public abstract class RecipeDAO {
+    private final RecipeRepository recipeRepository;
     private final Random random = new Random();
-    private final Map<String, Recipe> recipesCache;
+    private Map<String, Recipe> recipesCache;
 
-    public RecipeDAO(RecipesRepository recipesRepository) {
-        this.recipesRepository = recipesRepository;
+    protected RecipeDAO(RecipeRepository recipeRepository) {
+        this.recipeRepository = recipeRepository;
+        initializeRecipeCache(recipeRepository);
+    }
 
-        recipesCache = new HashMap<>();
-        recipesCache.putAll(recipesRepository.findAll().stream().collect(Collectors.toMap(Recipe::getId, recipe -> recipe)));
+    private void initializeRecipeCache(RecipeRepository recipeRepo) {
+        if (recipesCache == null || recipesCache.isEmpty()) {
+            recipesCache = fetchAllRecipes(recipeRepo);
+        }
+    }
+
+    private Map<String, Recipe> fetchAllRecipes(RecipeRepository recipeRepo) {
+        return (Map<String, Recipe>) recipeRepo.findAll().stream()
+                .collect(Collectors.toMap(Recipe::getId, recipe -> recipe));
     }
 
 
     public Recipe findRecipeByNameEqualsIgnoreCase(String name) {
-        return recipesRepository.findRecipesByNameEqualsIgnoreCase(name);
+        return recipeRepository.findRecipesByNameEqualsIgnoreCase(name);
     }
 
+
     public Recipe saveRecipe(Recipe recipe) {
-        updateCache(recipe);
-        return recipesRepository.save(recipe);
+        addToCache(recipe);
+        return recipeRepository.save(recipe);
 
     }
 
     public void deleteRecipe(String recipeId) {
         recipesCache.remove(recipeId);
-        recipesRepository.deleteRecipeById(recipeId);
+        recipeRepository.deleteRecipeById(recipeId);
     }
 
-    private void updateCache(Recipe recipe) {
+    private void addToCache(Recipe recipe) {
         recipesCache.put(recipe.getId(), recipe);
     }
 
     public Recipe getRandomRecipe() {
-        int randomIndex = random.nextInt(recipesCache.size());
-        Iterator<String> iterator = recipesCache.keySet().iterator();
-        for (int i = 0; i < randomIndex-1; i++) {
-            iterator.next();
+        if (recipesCache == null || recipesCache.isEmpty()) {
+            return null;
         }
-        return recipesCache.get(iterator.next());
 
+        List<String> keys = new ArrayList<>(recipesCache.keySet());
+        int randomIndex = random.nextInt(keys.size());
+        return recipesCache.get(keys.get(randomIndex));
     }
 
 
@@ -56,9 +66,9 @@ public class RecipeDAO {
         string = string.toLowerCase();
         for (Recipe recipe : recipesCache.values()) {
             if ((recipe.getText() != null && recipe.getText().toLowerCase().contains(string)) ||
-                    (recipe.getName() != null && recipe.getName().toLowerCase().contains(string)) ||
-                    (recipe.getHashtags() != null && recipe.getHashtags().toLowerCase().contains(string)) ||
-                    (recipe.getIngredients() != null && recipe.getIngredients().toLowerCase().contains(string))) {
+                (recipe.getName() != null && recipe.getName().toLowerCase().contains(string)) ||
+                (recipe.getHashtags() != null && recipe.getHashtags().toLowerCase().contains(string)) ||
+                (recipe.getIngredients() != null && recipe.getIngredients().toLowerCase().contains(string))) {
                 result.add(recipe);
             }
         }
@@ -66,6 +76,6 @@ public class RecipeDAO {
     }
 
     public Recipe findRecipeById(String recipeId) {
-        return recipesRepository.findRecipeById(recipeId);
+        return recipeRepository.findRecipeById(recipeId);
     }
 }
