@@ -1,10 +1,13 @@
 package org.example.cooking_recipe_bot.bot.handlers;
 
+import com.google.cloud.translate.Translate;
+import com.google.cloud.translate.TranslateOptions;
+import com.google.cloud.translate.Translation;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.ActionFactory;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
-import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
+import org.example.cooking_recipe_bot.bot.MessageTranslator;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAOManager;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
@@ -49,6 +52,47 @@ public class MessageHandler implements UpdateHandler {
         this.messageTranslator = messageTranslator;
     }
 
+    private void translateRecipeAndSave(Update update, String inputText, String sourceLanguage) {
+        Translate translate = TranslateOptions.getDefaultInstance().getService();
+        String targetLanguage = sourceLanguage.equals("en") ? "ru" : "en";
+        Translation translated = translate.translate(inputText, Translate.TranslateOption.sourceLanguage(sourceLanguage),
+                Translate.TranslateOption.targetLanguage(targetLanguage),
+                Translate.TranslateOption.model("base"),
+                Translate.TranslateOption.format("text"));
+        String translatedText = translated.getTranslatedText();
+        Recipe recipe;
+        try {
+            recipe = RecipeParser.parseRecipeFromString(translatedText, targetLanguage);
+            recipe.setDateOfCreation(new Date());
+            recipe.setDateOfLastEdit(new Date());
+        } catch (ParseException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+            return;
+        }
+        if (checkIsRecipeAlreadyExists(recipe, targetLanguage)) {
+            log.error("Recipe already exists " + recipe.getName());
+        } else {
+
+            if (update.getMessage().hasPhoto()) {
+                String photoId = update.getMessage().getPhoto().stream()
+                        .max(Comparator.comparing(PhotoSize::getFileSize))
+                        .map(PhotoSize::getFileId).orElse(null);
+                recipe.setPhotoId(photoId);
+            } else if (update.getMessage().hasAnimation()) {
+                String animationId = update.getMessage().getAnimation().getFileId();
+                recipe.setAnimationId(animationId);
+            } else if (update.getMessage().hasVideo()) {
+                String videoId = update.getMessage().getVideo().getFileId();
+                recipe.setVideoId(videoId);
+            }
+
+            recipeDAOManager.getRecipeDAO(targetLanguage).saveRecipe(recipe);
+
+        }
+
+    }
+
     @Override
     public SendMessage handle(Update update) {
         if (!update.hasMessage()) {
@@ -59,7 +103,7 @@ public class MessageHandler implements UpdateHandler {
         Message message = update.getMessage();
         User user = getOrCreateUserFromUpdate(update);
         if (user == null) {
-            log.error(this.getClass().getName() + " No user in update");
+            log.error("{} No user in update", this.getClass().getName());
             log.error(update.toString());
             return null;
         }
@@ -113,10 +157,10 @@ public class MessageHandler implements UpdateHandler {
             Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
             recipe.setPhotoId(null);
             recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipe);
-            sendMessage.setText(messageTranslator.getMessage(PHOTO_WAS_DELETED_MESSAGE.name(),user.getLanguage()));
+            sendMessage.setText(messageTranslator.getMessage(PHOTO_WAS_DELETED_MESSAGE.name(), user.getLanguage()));
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         } else {
-            sendMessage.setText(messageTranslator.getMessage(SEND_ME_PHOTO_MESSAGE.name(),user.getLanguage()));
+            sendMessage.setText(messageTranslator.getMessage(SEND_ME_PHOTO_MESSAGE.name(), user.getLanguage()));
         }
         return sendMessage;
     }
@@ -128,10 +172,10 @@ public class MessageHandler implements UpdateHandler {
             recipe.setVideoId(null);
             recipe.setAnimationId(null);
             recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipe);
-            sendMessage.setText(messageTranslator.getMessage(VIDEO_WAS_DELETED_MESSAGE.name(),user.getLanguage()));
+            sendMessage.setText(messageTranslator.getMessage(VIDEO_WAS_DELETED_MESSAGE.name(), user.getLanguage()));
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         } else {
-            sendMessage.setText(messageTranslator.getMessage(SEND_ME_VIDEO_MESSAGE.name(),user.getLanguage()));
+            sendMessage.setText(messageTranslator.getMessage(SEND_ME_VIDEO_MESSAGE.name(), user.getLanguage()));
         }
         return sendMessage;
     }
@@ -139,7 +183,7 @@ public class MessageHandler implements UpdateHandler {
     private SendMessage handleNoTextState(BotStateContext botStateContext, SendMessage sendMessage, Update update, User user) {
         switch (botStateContext.getCurrentBotState()) {
             case DEFAULT:
-                sendMessage.setText(messageTranslator.getMessage(INSERT_KEYWORD_MESSAGE.name(),user.getLanguage()));
+                sendMessage.setText(messageTranslator.getMessage(INSERT_KEYWORD_MESSAGE.name(), user.getLanguage()));
                 break;
             case ADDING_RECIPE:
                 return addNewRecipe(update, sendMessage, user);
@@ -165,7 +209,6 @@ public class MessageHandler implements UpdateHandler {
         return botStateContext;
     }
 
-
     private SendMessage sendNotificationToUsers(Update update) {
         List<MessageEntity> messageEntities = update.getMessage().getEntities();
         String notificationText = update.getMessage().getText();
@@ -174,7 +217,7 @@ public class MessageHandler implements UpdateHandler {
             SendMessage sendMessage = SendMessage.builder().chatId(usr.getChatId()).text(notificationText).entities(messageEntities).build();
 
             try {
-                log.info("Sending message to user " + usr);
+                log.info("Sending message to user {}", usr);
                 telegramClient.execute(sendMessage);
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
@@ -184,9 +227,8 @@ public class MessageHandler implements UpdateHandler {
             }
         }
 
-        return SendMessage.builder().chatId(update.getMessage().getChatId()).text(messageTranslator.getMessage(BotMessageEnum.NOTIFICATION_WAS_SENT_MESSAGE.name(),update.getMessage().getFrom().getLanguageCode())).build();
+        return SendMessage.builder().chatId(update.getMessage().getChatId()).text(messageTranslator.getMessage(BotMessageEnum.NOTIFICATION_WAS_SENT_MESSAGE.name(), update.getMessage().getFrom().getLanguageCode())).build();
     }
-
 
     private SendMessage addVideo(Update update, SendMessage sendMessage, User user) {
         String recipeId = botStateContextDAO.findBotStateContextById(user.getId()).getAdditionalData();
@@ -199,13 +241,13 @@ public class MessageHandler implements UpdateHandler {
             fileId = update.getMessage().getAnimation().getFileId();
             recipe.setAnimationId(fileId);
         } else {
-            sendMessage.setText(messageTranslator.getMessage(VIDEO_NOT_FOUND_MESSAGE.name(),user.getLanguage()));
+            sendMessage.setText(messageTranslator.getMessage(VIDEO_NOT_FOUND_MESSAGE.name(), user.getLanguage()));
             return sendMessage;
         }
 
         recipe.setDateOfLastEdit(new Date());
         recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipe);
-        sendMessage.setText(messageTranslator.getMessage(VIDEO_UPDATED_MESSAGE.name(),user.getLanguage()));
+        sendMessage.setText(messageTranslator.getMessage(VIDEO_UPDATED_MESSAGE.name(), user.getLanguage()));
 
         botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
@@ -222,7 +264,7 @@ public class MessageHandler implements UpdateHandler {
 
         String[] split = inputText.split("///");
         if (split.length != 3) {
-            sendMessage.setText(messageTranslator.getMessage(RECIPE_UPDATING_FORMAT_ERROR.name(),user.getLanguage()));
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_UPDATING_FORMAT_ERROR.name(), user.getLanguage()));
             log.debug(this.getClass().getName() + " split.length=" + split.length);
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
             return sendMessage;
@@ -232,7 +274,7 @@ public class MessageHandler implements UpdateHandler {
         try {
             Long userId = user.getId();
             Long chatId = update.getMessage().getChatId();
-            recipe = RecipeParser.parseRecipeFromString(recipeString,user.getLanguage());
+            recipe = RecipeParser.parseRecipeFromString(recipeString, user.getLanguage());
             Recipe recipeToEdit = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
             recipeToEdit.setText(recipe.getText());
             recipeToEdit.setName(recipe.getName());
@@ -241,13 +283,12 @@ public class MessageHandler implements UpdateHandler {
             recipeToEdit.setHashtags(recipe.getHashtags());
             recipeToEdit.setMessageEntities(messageEntities);
             recipeToEdit.setDateOfLastEdit(new Date());
-            recipeToEdit.setDateOfLastEdit(new Date());
 
             recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipeToEdit);
-            sendMessage.setText(messageTranslator.getMessage(RECIPE_UPDATED_MESSAGE.name(),user.getLanguage()));
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_UPDATED_MESSAGE.name(), user.getLanguage()));
             actionFactory.sendRecipesList(userId, chatId, List.of(recipeToEdit));
         } catch (ParseException e) {
-            sendMessage.setText(messageTranslator.getMessage(RECIPE_PARSING_ERROR.name(),user.getLanguage()) + e.getMessage());
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_PARSING_ERROR.name(), user.getLanguage()) + e.getMessage());
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
 
@@ -273,7 +314,7 @@ public class MessageHandler implements UpdateHandler {
         recipe.setThumbnailId(thumbnailId);
         recipe.setDateOfLastEdit(new Date());
         recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipe);
-        sendMessage.setText(messageTranslator.getMessage(PHOTO_UPDATED_MESSAGE.name(),user.getLanguage()));
+        sendMessage.setText(messageTranslator.getMessage(PHOTO_UPDATED_MESSAGE.name(), user.getLanguage()));
         actionFactory.sendRecipesList(user.getId(), update.getMessage().getChatId(), List.of(recipe));
         botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
@@ -281,26 +322,29 @@ public class MessageHandler implements UpdateHandler {
 
     private SendMessage addNewRecipe(Update update, SendMessage sendMessage, User user) {
         List<MyMessageEntity> messageEntities = new ArrayList<>();
-
+        String languageCode = user.getLanguage();
         if (update.getMessage().getEntities() != null) {
             messageEntities = MessageEntityMapper.mapToMyMessageEntities(update.getMessage().getEntities(), 0);
         }
         String inputText = update.getMessage().hasText() ? update.getMessage().getText() : update.getMessage().getCaption();
+
+
         Recipe recipe;
         try {
-            recipe = RecipeParser.parseRecipeFromString(inputText, user.getLanguage());
+            recipe = RecipeParser.parseRecipeFromString(inputText, languageCode);
             recipe.setDateOfCreation(new Date());
+            recipe.setDateOfLastEdit(new Date());
         } catch (ParseException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
-            sendMessage.setText(messageTranslator.getMessage(RECIPE_PARSING_ERROR.name(),user.getLanguage()) + e.getMessage());
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_PARSING_ERROR.name(), languageCode) + e.getMessage());
             return sendMessage;
         }
 
-        if (checkIsRecipeAlreadyExists(recipe, user.getLanguage())) {
-            sendMessage.setText(messageTranslator.getMessage(RECIPE_ALREADY_EXISTS_MESSAGE.name(),user.getLanguage()));
+        if (checkIsRecipeAlreadyExists(recipe, languageCode)) {
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_ALREADY_EXISTS_MESSAGE.name(), languageCode));
         } else {
-
+            translateRecipeAndSave(update, inputText, languageCode);
             if (update.getMessage().hasPhoto()) {
                 String photoId = update.getMessage().getPhoto().stream()
                         .max(Comparator.comparing(PhotoSize::getFileSize))
@@ -315,19 +359,18 @@ public class MessageHandler implements UpdateHandler {
             }
 
             recipe.setMessageEntities(messageEntities);
-            Recipe savedRecipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipe);
+            Recipe savedRecipe = recipeDAOManager.getRecipeDAO(languageCode).saveRecipe(recipe);
 
-                Long userId = user.getId();
-                Long chatId = update.getMessage().getChatId();
-                actionFactory.sendRecipesList(userId, chatId, List.of(savedRecipe));
-                sendMessage.setText(messageTranslator.getMessage(RECIPE_ADDED_MESSAGE.name(),user.getLanguage()));
+            Long userId = user.getId();
+            Long chatId = update.getMessage().getChatId();
+            actionFactory.sendRecipesList(userId, chatId, List.of(savedRecipe));
+            sendMessage.setText(messageTranslator.getMessage(RECIPE_ADDED_MESSAGE.name(), languageCode));
 
-                botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
+            botStateContextDAO.changeBotState(userId, BotState.DEFAULT);
         }
 
         return sendMessage;
     }
-
 
     private boolean checkIsRecipeAlreadyExists(Recipe recipe, String language) {
         String recipeName = recipe.getName().toLowerCase();

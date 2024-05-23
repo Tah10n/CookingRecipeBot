@@ -5,7 +5,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
-import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
+import org.example.cooking_recipe_bot.bot.MessageTranslator;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.config.BotConfig;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;

@@ -14,6 +14,7 @@
   "RECIPE_SENDING_ERROR": "Failed to send the recipe",
   "RECIPE_UPDATING_FORMAT_ERROR": "Incorrect format: do not delete the service line /edit_recipe///...///",
   "RECIPE_UPDATED_MESSAGE": "Recipe updated",
+  "RECIPE_DELETED_MESSAGE": "Recipe deleted",
   "INSERT_NOTIFICATION_MESSAGE": "Send a notification text or write /cancel to cancel",
   "CANCEL_MESSAGE": "Action canceled",
   "USER_NOT_FOUND": "User not found",

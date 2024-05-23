@@ -3,7 +3,6 @@ package org.example.cooking_recipe_bot.bot;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
 import org.example.cooking_recipe_bot.bot.constants.ButtonNameEnum;
-import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
@@ -128,7 +127,9 @@ public class ActionFactory {
             if (userIsNotAdmin(user)) return;
 
             SendMessage sendMessage = SendMessage.builder().chatId(chatId)
-                    .text(messageTranslator.getMessage(BotMessageEnum.INSERT_RECIPE_MESSAGE.name(), user.getLanguage())).build();
+                    .text(messageTranslator.getMessage(BotMessageEnum.INSERT_RECIPE_MESSAGE.name(), user.getLanguage()))
+                    .replyMarkup(inlineKeyboardMaker.getCancelKeyboard(user))
+                    .build();
             try {
                 telegramClient.execute(sendMessage);
             } catch (TelegramApiException e) {

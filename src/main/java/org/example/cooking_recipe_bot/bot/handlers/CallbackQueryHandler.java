@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.ActionFactory;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
-import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
+import org.example.cooking_recipe_bot.bot.MessageTranslator;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
@@ -247,14 +247,16 @@ public class CallbackQueryHandler implements UpdateHandler {
     }
 
     private void yesForDeleteRecipe(CallbackQuery callbackQuery, long chatId, int messageId, User user) {
-        String recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
+        int previousMessageId = Integer.parseInt(callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1, callbackQuery.getData().lastIndexOf(":")));
+        String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
         recipeDAOManager.getRecipeDAO(user.getLanguage()).deleteRecipe(recipeId);
 
         DeleteMessage deleteMessage1 = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-
-        SendMessage sendMessage = SendMessage.builder().chatId(chatId).text("Рецепт удален").build();
+        DeleteMessage deleteMessage2 = DeleteMessage.builder().chatId(chatId).messageId(previousMessageId).build();
+        SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(messageTranslator.getMessage(BotMessageEnum.RECIPE_DELETED_MESSAGE.name(), user.getLanguage())).build();
         try {
             telegramClient.execute(deleteMessage1);
+            telegramClient.execute(deleteMessage2);
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
             log.error(e.getMessage());
@@ -263,11 +265,17 @@ public class CallbackQueryHandler implements UpdateHandler {
     }
 
     private void deleteRecipe(CallbackQuery callbackQuery, long chatId, User user) {
+        int messageId = callbackQuery.getMessage().getMessageId();
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
-        String message = String.format(messageTranslator.getMessage(BotMessageEnum.DELETE_RECIPE_QUESTION_MESSAGE.name(), user.getLanguage()), recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId).getName());
+        Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
+        if(recipe == null) {
+            return;
+        }
+        String recipeName = recipe.getName();
+        String message = String.format(messageTranslator.getMessage(BotMessageEnum.DELETE_RECIPE_QUESTION_MESSAGE.name(), user.getLanguage()), recipeName);
         SendMessage questionMessage = SendMessage.builder().chatId(chatId)
                 .text(message)
-                .replyMarkup(inlineKeyboardMaker.getYesOrNoForDeleteRecipeKeyboard(user, recipeId)).build();
+                .replyMarkup(inlineKeyboardMaker.getYesOrNoForDeleteRecipeKeyboard(user, recipeId, messageId)).build();
         try {
             telegramClient.execute(questionMessage);
         } catch (TelegramApiException e) {

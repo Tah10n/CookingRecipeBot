@@ -14,6 +14,7 @@
   "RECIPE_SENDING_ERROR": "Не удалось отправить рецепт",
   "RECIPE_UPDATING_FORMAT_ERROR": "Неверный формат: не стирайте служебную строку /edit_recipe///...///",
   "RECIPE_UPDATED_MESSAGE": "Рецепт обновлен",
+  "RECIPE_DELETED_MESSAGE": "Рецепт удален",
   "INSERT_NOTIFICATION_MESSAGE": "Отправьте текст уведомления или напишите /cancel для отмены",
   "CANCEL_MESSAGE": "Действие отменено",
   "USER_NOT_FOUND": "Пользователь не найден ",

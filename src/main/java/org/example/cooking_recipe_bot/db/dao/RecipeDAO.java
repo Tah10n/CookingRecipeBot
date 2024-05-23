@@ -52,7 +52,10 @@ public abstract class RecipeDAO {
 
     public Recipe getRandomRecipe() {
         if (recipesCache == null || recipesCache.isEmpty()) {
-            return null;
+            initializeRecipeCache(recipeRepository);
+            if(recipesCache == null || recipesCache.isEmpty()) {
+                return null;
+            }
         }
 
         List<String> keys = new ArrayList<>(recipesCache.keySet());
@@ -62,17 +65,17 @@ public abstract class RecipeDAO {
 
 
     public List<Recipe> findRecipesByString(String string) {
-        Set<Recipe> result = new HashSet<>();
+        Set<String> result = new HashSet<>();
         string = string.toLowerCase();
         for (Recipe recipe : recipesCache.values()) {
             if ((recipe.getText() != null && recipe.getText().toLowerCase().contains(string)) ||
                 (recipe.getName() != null && recipe.getName().toLowerCase().contains(string)) ||
                 (recipe.getHashtags() != null && recipe.getHashtags().toLowerCase().contains(string)) ||
                 (recipe.getIngredients() != null && recipe.getIngredients().toLowerCase().contains(string))) {
-                result.add(recipe);
+                result.add(recipe.getId());
             }
         }
-        return new ArrayList<>(result);
+        return result.stream().map(recipesCache::get).toList();
     }
 
     public Recipe findRecipeById(String recipeId) {

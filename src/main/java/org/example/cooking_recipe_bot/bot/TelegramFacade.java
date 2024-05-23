@@ -1,8 +1,6 @@
 package org.example.cooking_recipe_bot.bot;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
-import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
 import org.example.cooking_recipe_bot.bot.handlers.CallbackQueryHandler;
 import org.example.cooking_recipe_bot.bot.handlers.InlineQueryHandler;
 import org.example.cooking_recipe_bot.bot.handlers.MessageHandler;
@@ -11,7 +9,6 @@ import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -24,16 +21,14 @@ public class TelegramFacade {
     private final MessageHandler messageHandler;
     private final CallbackQueryHandler callbackQueryHandler;
     private final UserDAO userDAO;
-private final MessageTranslator messageTranslator;
     private final InlineQueryHandler inlineQueryHandler;
 
 
-    public TelegramFacade(MessageHandler messageHandler, CallbackQueryHandler callbackQueryHandler, InlineQueryHandler inlineQueryHandler, UserDAO userDAO, MessageTranslator messageTranslator) {
+    public TelegramFacade(MessageHandler messageHandler, CallbackQueryHandler callbackQueryHandler, InlineQueryHandler inlineQueryHandler, UserDAO userDAO) {
         this.messageHandler = messageHandler;
         this.callbackQueryHandler = callbackQueryHandler;
         this.inlineQueryHandler = inlineQueryHandler;
         this.userDAO = userDAO;
-        this.messageTranslator = messageTranslator;
     }
 
 
