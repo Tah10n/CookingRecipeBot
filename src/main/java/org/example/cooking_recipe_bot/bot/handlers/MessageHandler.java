@@ -20,6 +20,7 @@ import org.example.cooking_recipe_bot.utils.RecipeParser;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -247,8 +248,15 @@ public class MessageHandler implements UpdateHandler {
 
         recipe.setDateOfLastEdit(new Date());
         recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipe);
+        DeleteMessage deleteMessage = DeleteMessage.builder().chatId(update.getMessage().getChatId()).messageId(update.getMessage().getMessageId()).build();
+        try {
+            telegramClient.execute(deleteMessage);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+        }
         sendMessage.setText(messageTranslator.getMessage(VIDEO_UPDATED_MESSAGE.name(), user.getLanguage()));
-
+        actionFactory.sendRecipesList(user.getId(), update.getMessage().getChatId(), List.of(recipe));
         botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
         return sendMessage;
     }
@@ -314,6 +322,13 @@ public class MessageHandler implements UpdateHandler {
         recipe.setThumbnailId(thumbnailId);
         recipe.setDateOfLastEdit(new Date());
         recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipe);
+        DeleteMessage deleteMessage = DeleteMessage.builder().chatId(update.getMessage().getChatId()).messageId(update.getMessage().getMessageId()).build();
+        try {
+            telegramClient.execute(deleteMessage);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+        }
         sendMessage.setText(messageTranslator.getMessage(PHOTO_UPDATED_MESSAGE.name(), user.getLanguage()));
         actionFactory.sendRecipesList(user.getId(), update.getMessage().getChatId(), List.of(recipe));
         botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);

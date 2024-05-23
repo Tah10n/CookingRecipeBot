@@ -50,10 +50,10 @@ public class ActionFactory {
 
     public Map<String, Runnable> createButtonActions(User user, long chatId) {
 
-        String findRandomRecipeButton = messageTranslator.getMessage(ButtonNameEnum.FIND_RANDOM_RECIPE_BUTTON.name(),user.getLanguage()).toLowerCase();
-        String addRecipeButton = messageTranslator.getMessage(ButtonNameEnum.ADD_RECIPE_BUTTON.name(),user.getLanguage()).toLowerCase();
-        String usersButton = messageTranslator.getMessage(ButtonNameEnum.USERS_BUTTON.name(),user.getLanguage()).toLowerCase();
-        String sendNotificationButton = messageTranslator.getMessage(ButtonNameEnum.SEND_NOTIFICATION.name(),user.getLanguage()).toLowerCase();
+        String findRandomRecipeButton = messageTranslator.getMessage(ButtonNameEnum.FIND_RANDOM_RECIPE_BUTTON.name(), user.getLanguage()).toLowerCase();
+        String addRecipeButton = messageTranslator.getMessage(ButtonNameEnum.ADD_RECIPE_BUTTON.name(), user.getLanguage()).toLowerCase();
+        String usersButton = messageTranslator.getMessage(ButtonNameEnum.USERS_BUTTON.name(), user.getLanguage()).toLowerCase();
+        String sendNotificationButton = messageTranslator.getMessage(ButtonNameEnum.SEND_NOTIFICATION.name(), user.getLanguage()).toLowerCase();
 
         buttonActions.put("/start", getStartAction(user, chatId));
         buttonActions.put("/cancel", getCancelAction(user, chatId));
@@ -270,6 +270,9 @@ public class ActionFactory {
     }
 
     private void sendRecipe(Long chatId, Recipe recipe, User user) {
+        if (recipe == null) {
+            return;
+        }
         if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
             SendPhoto sendPhoto = SendPhoto.builder()
                     .chatId(chatId)
