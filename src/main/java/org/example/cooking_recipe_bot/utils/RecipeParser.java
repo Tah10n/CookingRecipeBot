@@ -2,6 +2,8 @@ package org.example.cooking_recipe_bot.utils;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
+import org.example.cooking_recipe_bot.db.entity.RecipeEn;
+import org.example.cooking_recipe_bot.db.entity.RecipeRu;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +16,7 @@ public class RecipeParser {
     private RecipeParser() {
     }
 
-    public static Recipe parseRecipeFromString(String recipeString) throws ParseException {
+    public static Recipe parseRecipeFromString(String recipeString, String language) throws ParseException {
         if (recipeString == null) {
             throw new ParseException("Recipe string is null", 0);
         }
@@ -24,7 +26,12 @@ public class RecipeParser {
         if (lines.length == 0) {
             throw new ParseException("Recipe string has no lines", 0);
         }
-        Recipe recipe = new Recipe();
+        Recipe recipe;
+        if(language.equals("ru")) {
+            recipe = new RecipeRu();
+        } else {
+            recipe = new RecipeEn();
+        }
         recipe.setText(recipeString);
 
         String name = lines[0].trim().toLowerCase().replaceAll("[.]", "");
@@ -34,7 +41,7 @@ public class RecipeParser {
         recipe.setName(name);
 
         // Extract the ingredients
-        Pattern ingredientPattern = Pattern.compile("•(.+)");
+        Pattern ingredientPattern = Pattern.compile("[•-](.+)");
         StringBuilder ingredientsBuilder = new StringBuilder();
         for (String line : lines) {
             Matcher ingredientMatcher = ingredientPattern.matcher(line);
@@ -49,7 +56,7 @@ public class RecipeParser {
         recipe.setIngredients(ingredientsBuilder.toString().trim().toLowerCase());
 
         // Extract the instructions
-        Pattern instructionPattern = Pattern.compile("(?<=\\n)([^•#]+)");
+        Pattern instructionPattern = Pattern.compile("(?<=\\n)([^•#-]+)");
         Matcher instructionMatcher = instructionPattern.matcher(recipeString);
         StringBuilder instructionsBuilder = new StringBuilder();
         while (instructionMatcher.find()) {

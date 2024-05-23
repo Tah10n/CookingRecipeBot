@@ -7,7 +7,7 @@ import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
-import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
+import org.example.cooking_recipe_bot.db.dao.RecipeDAOManager;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
@@ -34,16 +34,16 @@ public class ActionFactory {
     private final BotStateContextDAO botStateContextDAO;
     private final TelegramClient telegramClient;
     private final UserDAO userDAO;
-    private final RecipeDAO recipeDAO;
+    private final RecipeDAOManager recipeDAOManager;
     private final ReplyKeyboardMaker replyKeyboardMaker;
     private final InlineKeyboardMaker inlineKeyboardMaker;
     private final MessageTranslator messageTranslator;
 
-    public ActionFactory(BotStateContextDAO botStateContextDAO, TelegramClient telegramClient, UserDAO userDAO, RecipeDAO recipeDAO, ReplyKeyboardMaker replyKeyboardMaker, InlineKeyboardMaker inlineKeyboardMaker, MessageTranslator messageTranslator) {
+    public ActionFactory(BotStateContextDAO botStateContextDAO, TelegramClient telegramClient, UserDAO userDAO, RecipeDAOManager recipeDAOManager, ReplyKeyboardMaker replyKeyboardMaker, InlineKeyboardMaker inlineKeyboardMaker, MessageTranslator messageTranslator) {
         this.botStateContextDAO = botStateContextDAO;
         this.telegramClient = telegramClient;
         this.userDAO = userDAO;
-        this.recipeDAO = recipeDAO;
+        this.recipeDAOManager = recipeDAOManager;
         this.replyKeyboardMaker = replyKeyboardMaker;
         this.inlineKeyboardMaker = inlineKeyboardMaker;
         this.messageTranslator = messageTranslator;
@@ -55,7 +55,6 @@ public class ActionFactory {
         String addRecipeButton = messageTranslator.getMessage(ButtonNameEnum.ADD_RECIPE_BUTTON.name(),user.getLanguage()).toLowerCase();
         String usersButton = messageTranslator.getMessage(ButtonNameEnum.USERS_BUTTON.name(),user.getLanguage()).toLowerCase();
         String sendNotificationButton = messageTranslator.getMessage(ButtonNameEnum.SEND_NOTIFICATION.name(),user.getLanguage()).toLowerCase();
-        String helpButton = messageTranslator.getMessage(ButtonNameEnum.HELP_BUTTON.name(),user.getLanguage()).toLowerCase();
 
         buttonActions.put("/start", getStartAction(user, chatId));
         buttonActions.put("/cancel", getCancelAction(user, chatId));
@@ -145,7 +144,7 @@ public class ActionFactory {
         return () -> {
 
             botStateContextDAO.changeBotState(user.getId(), BotState.DEFAULT);
-            Recipe randomRecipe = recipeDAO.getRandomRecipe();
+            Recipe randomRecipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).getRandomRecipe();
             if (randomRecipe != null) {
                 sendRecipesList(user.getId(), chatId, List.of(randomRecipe));
             } else {
@@ -307,7 +306,7 @@ public class ActionFactory {
 
     public InlineKeyboardMarkup getRecipeKeyboardWithRateButton(Recipe recipe, User user, InlineKeyboardMarkup recipeKeyboard) {
 
-        if (checkUserIsNotVote(user, recipe) && recipeKeyboard.getKeyboard().get(0).get(0).getText().equals("закрыть")) {
+        if (checkUserIsNotVote(user, recipe) && recipeKeyboard.getKeyboard().get(0).get(0).getText().equals(messageTranslator.getMessage(ButtonNameEnum.CLOSE.name(), user.getLanguage()))) {
             recipeKeyboard = inlineKeyboardMaker.addRateButtonKeyboard(recipeKeyboard, recipe, user);
         }
         return recipeKeyboard;

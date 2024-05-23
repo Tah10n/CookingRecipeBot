@@ -8,7 +8,7 @@ import org.example.cooking_recipe_bot.bot.constants.MessageTranslator;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
-import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
+import org.example.cooking_recipe_bot.db.dao.RecipeDAOManager;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
@@ -34,7 +34,6 @@ import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaVideo;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
@@ -50,16 +49,16 @@ public class CallbackQueryHandler implements UpdateHandler {
     private final ActionFactory actionFactory;
     private final InlineKeyboardMaker inlineKeyboardMaker;
     private final TelegramClient telegramClient;
-    private final RecipeDAO recipeDAO;
+    private final RecipeDAOManager recipeDAOManager;
     private final BotStateContextDAO botStateContextDAO;
     private final MessageTranslator messageTranslator;
     private final ReplyKeyboardMaker replyKeyboardMaker;
 
-    public CallbackQueryHandler(InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAO recipeDAO, BotStateContextDAO botStateContextDAO, UserDAO userDAO, ActionFactory actionFactory, MessageTranslator messageTranslator, ReplyKeyboardMaker replyKeyboardMaker) {
+    public CallbackQueryHandler(InlineKeyboardMaker inlineKeyboardMaker, TelegramClient telegramClient, RecipeDAOManager recipeDAOManager, BotStateContextDAO botStateContextDAO, UserDAO userDAO, ActionFactory actionFactory, MessageTranslator messageTranslator, ReplyKeyboardMaker replyKeyboardMaker) {
 
         this.inlineKeyboardMaker = inlineKeyboardMaker;
         this.telegramClient = telegramClient;
-        this.recipeDAO = recipeDAO;
+        this.recipeDAOManager = recipeDAOManager;
         this.botStateContextDAO = botStateContextDAO;
         this.userDAO = userDAO;
         this.actionFactory = actionFactory;
@@ -95,7 +94,7 @@ public class CallbackQueryHandler implements UpdateHandler {
                 deleteRecipe(callbackQuery, chatId, user);
                 break;
             case ("yes_for_delete_recipe_button"):
-                yesForDeleteRecipe(callbackQuery, chatId, messageId);
+                yesForDeleteRecipe(callbackQuery, chatId, messageId, user);
                 break;
             case ("no_for_delete_recipe_button"):
                 noForDeleteRecipe(chatId, messageId);
@@ -247,9 +246,9 @@ public class CallbackQueryHandler implements UpdateHandler {
         }
     }
 
-    private void yesForDeleteRecipe(CallbackQuery callbackQuery, long chatId, int messageId) {
+    private void yesForDeleteRecipe(CallbackQuery callbackQuery, long chatId, int messageId, User user) {
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
-        recipeDAO.deleteRecipe(recipeId);
+        recipeDAOManager.getRecipeDAO(user.getLanguage()).deleteRecipe(recipeId);
 
         DeleteMessage deleteMessage1 = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
 
@@ -265,7 +264,7 @@ public class CallbackQueryHandler implements UpdateHandler {
 
     private void deleteRecipe(CallbackQuery callbackQuery, long chatId, User user) {
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
-        String message = String.format(messageTranslator.getMessage(BotMessageEnum.DELETE_RECIPE_QUESTION_MESSAGE.name(), user.getLanguage()), recipeDAO.findRecipeById(recipeId).getName());
+        String message = String.format(messageTranslator.getMessage(BotMessageEnum.DELETE_RECIPE_QUESTION_MESSAGE.name(), user.getLanguage()), recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId).getName());
         SendMessage questionMessage = SendMessage.builder().chatId(chatId)
                 .text(message)
                 .replyMarkup(inlineKeyboardMaker.getYesOrNoForDeleteRecipeKeyboard(user, recipeId)).build();
@@ -282,7 +281,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         Long userId = callbackQuery.getFrom().getId();
         User user = userDAO.getUserById(userId);
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
-        Recipe recipe = recipeDAO.findRecipeById(recipeId);
+        Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
         if (recipe == null) {
             SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(messageTranslator.getMessage(BotMessageEnum.RECIPE_NOT_FOUND_MESSAGE.name(), user.getLanguage())).build();
             try {
@@ -350,6 +349,17 @@ public class CallbackQueryHandler implements UpdateHandler {
                         log.error(Arrays.toString(e.getStackTrace()));
                     }
 
+                } else {
+                    editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString())
+                            .entities(messageEntities).build();
+                    editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
+                    try {
+                        telegramClient.execute(editMessageTextFromOpenButton);
+                    } catch (TelegramApiException e) {
+                        log.error(e.getMessage());
+                        log.error(Arrays.toString(e.getStackTrace()));
+                    }
+                    return;
                 }
                 SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString())
                         .entities(messageEntities).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
@@ -359,6 +369,7 @@ public class CallbackQueryHandler implements UpdateHandler {
                     log.error(e.getMessage());
                     log.error(Arrays.toString(e.getStackTrace()));
                 }
+                return;
             }
             editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString())
                     .entities(messageEntities).build();
@@ -481,10 +492,11 @@ public class CallbackQueryHandler implements UpdateHandler {
 
     private void rateRecipe(CallbackQuery callbackQuery, long userId, long chatId, int messageId, int ratingFromUser) {
         EditMessageText editMessageText;
+        User user = userDAO.getUserById(userId);
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
 
         Recipe recipe;
-        recipe = recipeDAO.findRecipeById(recipeId);
+        recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
         Double rating = recipe.getRating();
         if (rating == null) {
             rating = (double) ratingFromUser;
@@ -497,7 +509,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         }
         votedUsersIds.add(userId);
         recipe.setVotedUsersIds(votedUsersIds);
-        recipeDAO.saveRecipe(recipe);
+        recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipe);
         editMessageText = getEditMessageTextFromOpenButton(recipe, chatId, messageId, userId);
         try {
             telegramClient.execute(editMessageText);

@@ -3,14 +3,12 @@ package org.example.cooking_recipe_bot.db.entity;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 import java.util.List;
 
 @Data
-@Document(collection = "recipes")
-public class Recipe {
+public abstract class Recipe {
     @Id
     @Indexed(unique = true)
     private String id;
@@ -30,7 +28,6 @@ public class Recipe {
     private List<Long> votedUsersIds;
     private List<MyMessageEntity> messageEntities;
 
-    @Override
     public String toString() {
         if (text != null && !text.isEmpty()) {
             return text;
