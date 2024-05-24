@@ -133,7 +133,7 @@ public class ActionFactory {
                 return;
             }
 
-            sendUsersList(user, chatId, userList);
+            sendUserList(user, chatId, userList);
         };
     }
 
@@ -215,25 +215,23 @@ public class ActionFactory {
         };
     }
 
-    public void sendUsersList(User requester, long chatId, List<User> userList) {
-        if(userList.size() > 5) {
-            for (int i = 0; i < 5; i++) {
-                if (userList.get(i).getUserName() != null && (userDAO.isFirstAdmin(userList.get(i).getUserName()) || userList.get(i).getId().equals(requester.getId()))) {
-                    continue;
-                }
+    public void sendUserList(User requester, long chatId, List<User> users) {
+        int maxUsersToDisplay = 10;
+        List<User> usersToDisplay = users.subList(0, Math.min(users.size(), maxUsersToDisplay));
 
-                sendUser(requester,chatId,userList.get(i));
-            }
-            sendMoreUsersButton(requester,chatId, userList.subList(5, userList.size()));
-        } else {
-            for (User user : userList) {
-                if (user.getUserName() != null && (userDAO.isFirstAdmin(user.getUserName()) || user.getId().equals(requester.getId()))) {
-                    continue;
-                }
-                sendUser(requester,chatId,user);
+        for (User user : usersToDisplay) {
+            if (isUserEligibleToDisplay(user, requester)) {
+                sendUser(requester, chatId, user);
             }
         }
 
+        if (users.size() > maxUsersToDisplay) {
+            sendMoreUsersButton(requester, chatId, users.subList(maxUsersToDisplay, users.size()));
+        }
+    }
+
+    private boolean isUserEligibleToDisplay(User user, User requester) {
+        return user.getUserName() != null && !userDAO.isFirstAdmin(user.getUserName()) && !user.getId().equals(requester.getId());
     }
 
     private void sendMoreUsersButton(User requester, long chatId, List<User> users) {

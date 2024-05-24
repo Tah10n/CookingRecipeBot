@@ -210,7 +210,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         DeleteMessage deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
         try {
             telegramClient.execute(deleteMessage);
-            actionFactory.sendUsersList(user, chatId, users);
+            actionFactory.sendUserList(user, chatId, users);
         } catch (TelegramApiException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
