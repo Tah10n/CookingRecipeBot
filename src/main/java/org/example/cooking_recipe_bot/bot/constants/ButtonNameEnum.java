@@ -14,6 +14,7 @@ public enum ButtonNameEnum {
     USERS_BUTTON,
     SEND_NOTIFICATION,
     MORE_RECIPES,
+    MORE_USERS,
     CANCEL,
     YES,
     NO,

@@ -3,11 +3,12 @@ package org.example.cooking_recipe_bot.bot.handlers;
 import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.bot.ActionFactory;
 import org.example.cooking_recipe_bot.bot.BotState;
-import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
 import org.example.cooking_recipe_bot.bot.MessageTranslator;
+import org.example.cooking_recipe_bot.bot.constants.BotMessageEnum;
 import org.example.cooking_recipe_bot.bot.keyboards.InlineKeyboardMaker;
 import org.example.cooking_recipe_bot.bot.keyboards.ReplyKeyboardMaker;
 import org.example.cooking_recipe_bot.db.dao.BotStateContextDAO;
+import org.example.cooking_recipe_bot.db.dao.RecipeDAO;
 import org.example.cooking_recipe_bot.db.dao.RecipeDAOManager;
 import org.example.cooking_recipe_bot.db.dao.UserDAO;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
@@ -34,6 +35,7 @@ import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaVideo;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
@@ -41,6 +43,8 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.example.cooking_recipe_bot.bot.constants.BotMessageEnum.RECIPE_NOT_FOUND_MESSAGE;
 
 @Slf4j
 @Service
@@ -70,82 +74,78 @@ public class CallbackQueryHandler implements UpdateHandler {
     public BotApiMethod<?> handle(Update update) {
         final CallbackQuery callbackQuery = update.getCallbackQuery();
         if (callbackQuery == null) {
-            log.error(this.getClass().getName() + " No callback query in update");
+            log.error("{} No callback query in update", this.getClass().getName());
             log.error(update.toString());
             return null;
         }
-        String data = callbackQuery.getData().substring(0, callbackQuery.getData().indexOf(":"));
+        String[] data = callbackQuery.getData().split(":");
         long chatId = callbackQuery.getMessage().getChatId();
         int messageId = callbackQuery.getMessage().getMessageId();
         long userId = update.getCallbackQuery().getFrom().getId();
         User user = userDAO.getUserById(userId);
 
-        switch (data) {
-            case ("delete_user_button"):
+        String action = data[0];
+
+        switch (action) {
+            case "delete_user_button":
                 deleteUser(callbackQuery, chatId, messageId);
                 break;
-            case ("set_admin_button"):
+            case "set_admin_button":
                 setAdmin(callbackQuery, chatId, messageId);
                 break;
-            case ("unset_admin_button"):
+            case "unset_admin_button":
                 unsetAdmin(callbackQuery, chatId, messageId);
                 break;
-            case ("delete_recipe_button"):
+            case "delete_recipe_button":
                 deleteRecipe(callbackQuery, chatId, user);
                 break;
-            case ("yes_for_delete_recipe_button"):
+            case "yes_for_delete_recipe_button":
                 yesForDeleteRecipe(callbackQuery, chatId, messageId, user);
                 break;
-            case ("no_for_delete_recipe_button"):
+            case "no_for_delete_recipe_button":
                 noForDeleteRecipe(chatId, messageId);
                 break;
-            case ("open_recipe_button"):
-                openAndCloseRecipe(callbackQuery, chatId, messageId);
+            case "open_recipe_button":
+                toggleRecipe(callbackQuery, chatId, messageId);
                 break;
-            case ("change_photo_button"):
+            case "change_photo_button":
                 changePhoto(callbackQuery, chatId);
                 break;
-            case ("change_video_button"):
+            case "change_video_button":
                 changeVideo(callbackQuery, chatId);
                 break;
-            case ("more_recipes_button"):
+            case "more_recipes_button":
                 moreRecipes(userId, chatId, messageId);
                 break;
-            case ("cancel_button"):
+            case "more_users_button":
+                moreUsers(userId, chatId, messageId);
+                break;
+            case "cancel_button":
                 cancelAction(chatId, messageId, userId);
                 break;
-            case ("rate_button"):
+            case "rate_button":
                 rateButtonAction(callbackQuery, chatId, messageId);
                 break;
-            case ("rate_1"):
-                rateRecipe(callbackQuery, userId, chatId, messageId, 1);
+            case "rate_1", "rate_2", "rate_3", "rate_4", "rate_5":
+
+                int rating = Integer.parseInt(action.substring(5));
+                rateRecipe(callbackQuery, userId, chatId, messageId, rating);
                 break;
-            case ("rate_2"):
-                rateRecipe(callbackQuery, userId, chatId, messageId, 2);
-                break;
-            case ("rate_3"):
-                rateRecipe(callbackQuery, userId, chatId, messageId, 3);
-                break;
-            case ("rate_4"):
-                rateRecipe(callbackQuery, userId, chatId, messageId, 4);
-                break;
-            case ("rate_5"):
-                rateRecipe(callbackQuery, userId, chatId, messageId, 5);
-                break;
-            case ("language_ru_button"):
+            case "language_ru_button":
                 switchToLanguage(callbackQuery, chatId, messageId, "ru");
                 break;
-            case ("language_en_button"):
+            case "language_en_button":
                 switchToLanguage(callbackQuery, chatId, messageId, "en");
                 break;
             default:
-                log.error(this.getClass().getName() + " Unexpected value in switch: " + data);
+                log.error("{} Unexpected value in switch: {}", this.getClass().getName(), action);
                 botStateContextDAO.changeBotState(userId, BotState.DEFAULT);
                 break;
         }
 
         return null;
     }
+
 
     private void switchToLanguage(CallbackQuery callbackQuery, long chatId, int messageId, String languageCode) {
         User user = userDAO.getUserById(callbackQuery.getFrom().getId());
@@ -197,6 +197,20 @@ public class CallbackQueryHandler implements UpdateHandler {
         try {
             telegramClient.execute(deleteMessage);
             actionFactory.sendRecipesList(userId, chatId, recipes);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+        }
+    }
+
+    private void moreUsers(long userId, long chatId, int messageId) {
+        BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(userId);
+        List<User> users = botStateContext.getUserList();
+        User user = userDAO.getUserById(userId);
+        DeleteMessage deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
+        try {
+            telegramClient.execute(deleteMessage);
+            actionFactory.sendUsersList(user, chatId, users);
         } catch (TelegramApiException e) {
             log.error(e.getMessage());
             log.error(Arrays.toString(e.getStackTrace()));
@@ -268,136 +282,153 @@ public class CallbackQueryHandler implements UpdateHandler {
         int messageId = callbackQuery.getMessage().getMessageId();
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1);
         Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
-        if(recipe == null) {
+        if (recipe == null) {
             return;
         }
         String recipeName = recipe.getName();
         String message = String.format(messageTranslator.getMessage(BotMessageEnum.DELETE_RECIPE_QUESTION_MESSAGE.name(), user.getLanguage()), recipeName);
-        SendMessage questionMessage = SendMessage.builder().chatId(chatId)
-                .text(message)
-                .replyMarkup(inlineKeyboardMaker.getYesOrNoForDeleteRecipeKeyboard(user, recipeId, messageId)).build();
-        try {
-            telegramClient.execute(questionMessage);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
-        }
+        InlineKeyboardMarkup yesOrNoForDeleteRecipeKeyboard = inlineKeyboardMaker.getYesOrNoForDeleteRecipeKeyboard(user, recipeId, messageId);
+
+        sendTextMessageWithMarkup(chatId, message, user.getLanguage(), yesOrNoForDeleteRecipeKeyboard);
+
     }
 
-    private void openAndCloseRecipe(CallbackQuery callbackQuery, long chatId, int messageId) {
-        int opened = Integer.parseInt(callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1, callbackQuery.getData().lastIndexOf(":")));
-        Long userId = callbackQuery.getFrom().getId();
+    private void toggleRecipe(CallbackQuery callbackQuery, long chatId, int messageId) {
+        int toggleState = Integer.parseInt(callbackQuery.getData().split(":")[1]);
+        long userId = callbackQuery.getFrom().getId();
         User user = userDAO.getUserById(userId);
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
         Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
+
         if (recipe == null) {
-            SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(messageTranslator.getMessage(BotMessageEnum.RECIPE_NOT_FOUND_MESSAGE.name(), user.getLanguage())).build();
-            try {
-                telegramClient.execute(sendMessage);
-            } catch (TelegramApiException e) {
-                log.error(e.getMessage());
-                log.error(Arrays.toString(e.getStackTrace()));
-            }
+            sendTextMessageWithMarkup(chatId, RECIPE_NOT_FOUND_MESSAGE.name(), user.getLanguage(), null);
             return;
         }
 
-        EditMessageText editMessageTextFromOpenButton = null;
         List<MessageEntity> messageEntities = new ArrayList<>();
         if (recipe.getMessageEntities() != null) {
             messageEntities = MessageEntityMapper.mapToMessageEntities(recipe.getMessageEntities());
         }
-        if (opened == 0) {
-            if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
-                if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
-                    EditMessageMedia editMessageMedia = EditMessageMedia.builder().chatId(chatId).messageId(messageId - 1)
-                            .media(new InputMediaAnimation(recipe.getAnimationId())).build();
-                    try {
-                        telegramClient.execute(editMessageMedia);
-                    } catch (TelegramApiException e) {
-                        log.error(e.getMessage());
-                        log.error(Arrays.toString(e.getStackTrace()));
-                    }
 
-                } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
-                    EditMessageMedia editMessageMedia = EditMessageMedia.builder().chatId(chatId).messageId(messageId - 1)
-                            .media(new InputMediaVideo(recipe.getVideoId())).build();
-                    try {
-                        telegramClient.execute(editMessageMedia);
-                    } catch (TelegramApiException e) {
-                        log.error(e.getMessage());
-                        log.error(Arrays.toString(e.getStackTrace()));
-                    }
-
-                }
-            } else {
-                if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
-                    DeleteMessage deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                    SendAnimation sendAnimation = SendAnimation.builder().chatId(chatId)
-                            .animation(new InputFile(recipe.getAnimationId())).build();
-
-                    try {
-                        telegramClient.execute(deleteMessage);
-                        telegramClient.execute(sendAnimation);
-
-                    } catch (TelegramApiException e) {
-                        log.error(e.getMessage());
-                        log.error(Arrays.toString(e.getStackTrace()));
-                    }
-
-                } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
-                    DeleteMessage deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
-                    SendVideo sendVideo = SendVideo.builder().chatId(chatId)
-                            .video(new InputFile(recipe.getVideoId())).build();
-
-                    try {
-                        telegramClient.execute(deleteMessage);
-                        telegramClient.execute(sendVideo);
-                    } catch (TelegramApiException e) {
-                        log.error(e.getMessage());
-                        log.error(Arrays.toString(e.getStackTrace()));
-                    }
-
-                } else {
-                    editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString())
-                            .entities(messageEntities).build();
-                    editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
-                    try {
-                        telegramClient.execute(editMessageTextFromOpenButton);
-                    } catch (TelegramApiException e) {
-                        log.error(e.getMessage());
-                        log.error(Arrays.toString(e.getStackTrace()));
-                    }
-                    return;
-                }
-                SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(recipe.toString())
-                        .entities(messageEntities).replyMarkup(getReplyMarkup(recipe, 1, userId)).build();
-                try {
-                    telegramClient.execute(sendMessage);
-                } catch (TelegramApiException e) {
-                    log.error(e.getMessage());
-                    log.error(Arrays.toString(e.getStackTrace()));
-                }
-                return;
+        try {
+            if (toggleState == 0) {
+                handleToggleStateZero(chatId, messageId, userId, recipe, messageEntities);
+            } else if (toggleState == 1) {
+                EditMessageText editMessageText = getEditMessageTextFromOpenButton(recipe, chatId, messageId, userId);
+                telegramClient.execute(editMessageText);
             }
-            editMessageTextFromOpenButton = EditMessageText.builder().chatId(chatId).messageId(messageId).text(recipe.toString())
-                    .entities(messageEntities).build();
-            editMessageTextFromOpenButton.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
-        } else if (opened == 1) {
-            editMessageTextFromOpenButton = getEditMessageTextFromOpenButton(recipe, chatId, messageId, userId);
+        } catch (TelegramApiException e) {
+            logError(e);
+        }
+    }
 
+    private void handleToggleStateZero(long chatId, int messageId, long userId, Recipe recipe, List<MessageEntity> messageEntities) throws TelegramApiException {
+        if (recipe.getPhotoId() != null && !recipe.getPhotoId().isEmpty()) {
+            handleMediaMessage(chatId, messageId, userId, recipe, messageEntities);
+        } else {
+            handleNonMediaMessage(chatId, messageId, userId, recipe, messageEntities);
+        }
+    }
+
+    private void handleMediaMessage(long chatId, int messageId, long userId, Recipe recipe, List<MessageEntity> messageEntities) throws TelegramApiException {
+        if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
+            EditMessageMedia editMessageMedia = EditMessageMedia.builder()
+                    .chatId(chatId)
+                    .messageId(messageId - 1)
+                    .media(new InputMediaAnimation(recipe.getAnimationId()))
+                    .build();
+            telegramClient.execute(editMessageMedia);
+        } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
+            EditMessageMedia editMessageMedia = EditMessageMedia.builder()
+                    .chatId(chatId)
+                    .messageId(messageId - 1)
+                    .media(new InputMediaVideo(recipe.getVideoId()))
+                    .build();
+            telegramClient.execute(editMessageMedia);
+        }
+        editTextMessageWithEntities(chatId,messageId, userId, recipe, messageEntities);
+    }
+
+    private void handleNonMediaMessage(long chatId, int messageId, long userId, Recipe recipe, List<MessageEntity> messageEntities) throws TelegramApiException {
+        if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
+            sendAnimationMessage(chatId, messageId, recipe);
+            sendTextMessageWithEntities(chatId, userId, recipe, messageEntities);
+        } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
+            sendVideoMessage(chatId, messageId, recipe);
+            sendTextMessageWithEntities(chatId, userId, recipe, messageEntities);
+        } else {
+            editTextMessageWithEntities(chatId, messageId, userId, recipe, messageEntities);
+        }
+    }
+
+    private void sendTextMessageWithEntities(long chatId, long userId, Recipe recipe, List<MessageEntity> messageEntities) throws TelegramApiException {
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(chatId).text(recipe.getText())
+                .entities(messageEntities).replyMarkup(getReplyMarkup(recipe, 1, userId))
+                .build();
+
+        telegramClient.execute(sendMessage);
+    }
+
+    private void sendAnimationMessage(long chatId, int messageId, Recipe recipe) throws TelegramApiException {
+        DeleteMessage deleteMessage = DeleteMessage.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .build();
+        SendAnimation sendAnimation = SendAnimation.builder()
+                .chatId(chatId)
+                .animation(new InputFile(recipe.getAnimationId()))
+                .build();
+        telegramClient.execute(deleteMessage);
+        telegramClient.execute(sendAnimation);
+    }
+
+    private void sendVideoMessage(long chatId, int messageId, Recipe recipe) throws TelegramApiException {
+        DeleteMessage deleteMessage = DeleteMessage.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .build();
+        SendVideo sendVideo = SendVideo.builder()
+                .chatId(chatId)
+                .video(new InputFile(recipe.getVideoId()))
+                .build();
+        telegramClient.execute(deleteMessage);
+        telegramClient.execute(sendVideo);
+    }
+
+    private void editTextMessageWithEntities(long chatId, int messageId, long userId, Recipe recipe, List<MessageEntity> messageEntities) throws TelegramApiException {
+        EditMessageText editMessageText = EditMessageText.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .text(recipe.toString())
+                .entities(messageEntities)
+                .build();
+        editMessageText.setReplyMarkup(getReplyMarkup(recipe, 1, userId));
+        telegramClient.execute(editMessageText);
+    }
+
+    private void logError(TelegramApiException e) {
+        log.error(e.getMessage());
+        log.error(Arrays.toString(e.getStackTrace()));
+    }
+
+
+    private void sendTextMessageWithMarkup(long chatId, String message, String language, ReplyKeyboard replyMarkup) {
+
+        SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(messageTranslator.getMessage(message, language)).build();
+        if (replyMarkup != null) {
+            sendMessage.setReplyMarkup(replyMarkup);
         }
         try {
-            telegramClient.execute(editMessageTextFromOpenButton);
+            telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
+            logError(e);
         }
-
     }
 
     private void unsetAdmin(CallbackQuery callbackQuery, long chatId, int messageId) {
-        Long userRequesterId = callbackQuery.getFrom().getId();
-        Long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
+        long userRequesterId = callbackQuery.getFrom().getId();
+        long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
         User userRequester = userDAO.getUserById(userRequesterId);
         User userFromMessage = userDAO.unsetAdmin(userIdFromMessage);
 
@@ -422,8 +453,8 @@ public class CallbackQueryHandler implements UpdateHandler {
     }
 
     private void setAdmin(CallbackQuery callbackQuery, long chatId, int messageId) {
-        Long userRequesterId = callbackQuery.getFrom().getId();
-        Long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
+        long userRequesterId = callbackQuery.getFrom().getId();
+        long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
         User userRequester = userDAO.getUserById(userRequesterId);
         User userFromMessage = userDAO.setAdmin(userIdFromMessage);
 
@@ -504,7 +535,8 @@ public class CallbackQueryHandler implements UpdateHandler {
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
 
         Recipe recipe;
-        recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
+        RecipeDAO<?> recipeDAO = recipeDAOManager.getRecipeDAO(user.getLanguage());
+        recipe = recipeDAO.findRecipeById(recipeId);
         Double rating = recipe.getRating();
         if (rating == null) {
             rating = (double) ratingFromUser;
@@ -517,7 +549,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         }
         votedUsersIds.add(userId);
         recipe.setVotedUsersIds(votedUsersIds);
-        recipeDAOManager.getRecipeDAO(user.getLanguage()).saveRecipe(recipe);
+        recipeDAO.saveRecipe(recipe);
         editMessageText = getEditMessageTextFromOpenButton(recipe, chatId, messageId, userId);
         try {
             telegramClient.execute(editMessageText);

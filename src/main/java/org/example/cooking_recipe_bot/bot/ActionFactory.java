@@ -118,7 +118,22 @@ public class ActionFactory {
     private @NotNull Runnable getGetUsersAction(User user, long chatId) {
         return () -> {
             if (userIsNotAdmin(user)) return;
-            sendUsersList(user, chatId);
+            List<User> userList = userDAO.findAllUsers();
+
+            if (userList == null || userList.isEmpty()) {
+                SendMessage sendMessage = SendMessage.builder().chatId(chatId)
+                        .text(messageTranslator.getMessage(BotMessageEnum.USER_NOT_FOUND.name(), user.getLanguage()))
+                        .build();
+                try {
+                    telegramClient.execute(sendMessage);
+                } catch (TelegramApiException e) {
+                    log.error(e.getMessage());
+                    log.error(Arrays.toString(e.getStackTrace()));
+                }
+                return;
+            }
+
+            sendUsersList(user, chatId, userList);
         };
     }
 
@@ -200,24 +215,52 @@ public class ActionFactory {
         };
     }
 
-    private void sendUsersList(User requester, long chatId) {
-        List<User> allUsers = userDAO.findAllUsers();
+    public void sendUsersList(User requester, long chatId, List<User> userList) {
+        if(userList.size() > 5) {
+            for (int i = 0; i < 5; i++) {
+                if (userList.get(i).getUserName() != null && (userDAO.isFirstAdmin(userList.get(i).getUserName()) || userList.get(i).getId().equals(requester.getId()))) {
+                    continue;
+                }
 
-        for (User user : allUsers) {
-            if (user.getUserName() != null && (userDAO.isFirstAdmin(user.getUserName()) || user.getId().equals(requester.getId()))) {
-                continue;
+                sendUser(requester,chatId,userList.get(i));
             }
-            SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(user.toString())
-                    .replyMarkup(inlineKeyboardMaker.getUserKeyboard(requester, user)).build();
-
-            try {
-                telegramClient.execute(sendMessage);
-            } catch (TelegramApiException e) {
-                log.error(e.getMessage());
-                log.error(Arrays.toString(e.getStackTrace()));
+            sendMoreUsersButton(requester,chatId, userList.subList(5, userList.size()));
+        } else {
+            for (User user : userList) {
+                if (user.getUserName() != null && (userDAO.isFirstAdmin(user.getUserName()) || user.getId().equals(requester.getId()))) {
+                    continue;
+                }
+                sendUser(requester,chatId,user);
             }
         }
 
+    }
+
+    private void sendMoreUsersButton(User requester, long chatId, List<User> users) {
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(chatId)
+                .text(messageTranslator.getMessage(BotMessageEnum.SEND_MORE_USERS_QUESTION_MESSAGE.name(), requester.getLanguage()))
+                .replyMarkup(inlineKeyboardMaker.getMoreUsersKeyboard(requester)).build();
+        try {
+            telegramClient.execute(sendMessage);
+            BotStateContext botStateContext = botStateContextDAO.findBotStateContextById(requester.getId());
+            botStateContext.setUserList(users);
+            botStateContextDAO.saveBotStateContext(botStateContext);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+        }
+    }
+
+    private void sendUser(User requester, long chatId, User user) {
+        SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(user.toString())
+                .replyMarkup(inlineKeyboardMaker.getUserKeyboard(requester, user)).build();
+        try {
+            telegramClient.execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+        }
     }
 
     public void sendRecipesList(Long userId, Long chatId, List<Recipe> recipes) {

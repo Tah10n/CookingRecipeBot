@@ -3,10 +3,12 @@ package org.example.cooking_recipe_bot.db.entity;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 import java.util.List;
 
+@Document
 @Data
 public abstract class Recipe {
     @Id

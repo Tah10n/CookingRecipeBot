@@ -82,7 +82,7 @@ public class InlineKeyboardMaker {
         return inlineKeyboardMarkup1;
     }
 
-    public ReplyKeyboard getMoreRecipesKeyboard(User user) {
+    public InlineKeyboardMarkup getMoreRecipesKeyboard(User user) {
         String moreRecipesButtonName = messageTranslator.getMessage(ButtonNameEnum.MORE_RECIPES.name(), user.getLanguage());
         String cancelButtonName = messageTranslator.getMessage(ButtonNameEnum.CANCEL.name(), user.getLanguage());
         InlineKeyboardButton moreRecipesButton = InlineKeyboardButton.builder().text(moreRecipesButtonName).callbackData("more_recipes_button:").build();
@@ -92,7 +92,7 @@ public class InlineKeyboardMaker {
                 .keyboardRow(new InlineKeyboardRow(cancelButton, moreRecipesButton)).build();
     }
 
-    public ReplyKeyboard getYesOrNoForDeleteRecipeKeyboard(User user, String recipeId, int messageId) {
+    public InlineKeyboardMarkup getYesOrNoForDeleteRecipeKeyboard(User user, String recipeId, int messageId) {
         String yesButtonName = messageTranslator.getMessage(ButtonNameEnum.YES.name(), user.getLanguage());
         String noButtonName = messageTranslator.getMessage(ButtonNameEnum.NO.name(), user.getLanguage());
         InlineKeyboardButton yesButton = InlineKeyboardButton.builder().text(yesButtonName).callbackData("yes_for_delete_recipe_button:" + messageId + ":"+ recipeId).build();
@@ -124,5 +124,15 @@ public class InlineKeyboardMaker {
         InlineKeyboardButton languageEnButton = InlineKeyboardButton.builder().text(languageEnButtonName).callbackData("language_en_button:").build();
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(languageRuButton, languageEnButton)).build();
+    }
+
+    public InlineKeyboardMarkup getMoreUsersKeyboard(User requester) {
+        String moreUsersButtonName = messageTranslator.getMessage(ButtonNameEnum.MORE_USERS.name(), requester.getLanguage());
+        String cancelButtonName = messageTranslator.getMessage(ButtonNameEnum.CANCEL.name(), requester.getLanguage());
+        InlineKeyboardButton moreRecipesButton = InlineKeyboardButton.builder().text(moreUsersButtonName).callbackData("more_users_button:").build();
+        InlineKeyboardButton cancelButton = InlineKeyboardButton.builder().text(cancelButtonName).callbackData("cancel_button:").build();
+
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(cancelButton, moreRecipesButton)).build();
     }
 }

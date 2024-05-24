@@ -1,31 +1,34 @@
 package org.example.cooking_recipe_bot.db.dao;
 
+import org.example.cooking_recipe_bot.bot.exceptions.RecipeSaveException;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.repository.RecipeRepository;
-import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Service
-public abstract class RecipeDAO {
-    private final RecipeRepository recipeRepository;
+
+public abstract class RecipeDAO<T extends Recipe> {
+    private static final Logger log = LoggerFactory.getLogger(RecipeDAO.class);
+    private final RecipeRepository<T> recipeRepository;
     private final Random random = new Random();
     private Map<String, Recipe> recipesCache;
 
-    protected RecipeDAO(RecipeRepository recipeRepository) {
+    protected RecipeDAO(RecipeRepository<T> recipeRepository) {
         this.recipeRepository = recipeRepository;
         initializeRecipeCache(recipeRepository);
     }
 
-    private void initializeRecipeCache(RecipeRepository recipeRepo) {
+    private void initializeRecipeCache(RecipeRepository<T> recipeRepo) {
         if (recipesCache == null || recipesCache.isEmpty()) {
             recipesCache = fetchAllRecipes(recipeRepo);
         }
     }
 
-    private Map<String, Recipe> fetchAllRecipes(RecipeRepository recipeRepo) {
-        return (Map<String, Recipe>) recipeRepo.findAll().stream()
+    private Map<String, Recipe> fetchAllRecipes(RecipeRepository<T> recipeRepo) {
+        return recipeRepo.findAll().stream()
                 .collect(Collectors.toMap(Recipe::getId, recipe -> recipe));
     }
 
@@ -35,10 +38,23 @@ public abstract class RecipeDAO {
     }
 
 
+    @SuppressWarnings("unchecked")
     public Recipe saveRecipe(Recipe recipe) {
-        addToCache(recipe);
-        return recipeRepository.save(recipe);
+        if (recipe == null) {
+            log.error("Recipe is null: {}", this.getClass().getSimpleName());
+            return null;
+        }
 
+        addToCache(recipe);
+
+        try {
+            return recipeRepository.save((T) recipe);
+        } catch (ClassCastException e) {
+            log.error("Recipe class cast exception: {}", this.getClass().getSimpleName());
+            throw new RecipeSaveException(recipe.getName(), e);
+        } catch (Exception e) {
+            throw new RecipeSaveException(recipe.getName(), e);
+        }
     }
 
     public void deleteRecipe(String recipeId) {

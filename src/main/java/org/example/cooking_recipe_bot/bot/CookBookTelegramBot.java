@@ -15,19 +15,4 @@ public class CookBookTelegramBot extends SpringTelegramWebhookBot {
         super(botPath, updateHandler, setWebhook, deleteWebhook);
 
     }
-
-    @Override
-    public void runDeleteWebhook() {
-        super.runDeleteWebhook();
-    }
-
-    @Override
-    public void runSetWebhook() {
-        super.runSetWebhook();
-    }
-
-    @Override
-    public BotApiMethod<?> consumeUpdate(Update update) {
-        return super.consumeUpdate(update);
-    }
 }

@@ -15,5 +15,6 @@ public class BotStateContext {
     private BotState currentBotState;
     private String additionalData;
     private List<Recipe> recipeList;
+    private List<User> userList;
 
 }
