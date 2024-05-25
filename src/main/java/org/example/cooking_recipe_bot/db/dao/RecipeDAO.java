@@ -6,6 +6,7 @@ import org.example.cooking_recipe_bot.db.repository.RecipeRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -18,17 +19,18 @@ public abstract class RecipeDAO<T extends Recipe> {
 
     protected RecipeDAO(RecipeRepository<T> recipeRepository) {
         this.recipeRepository = recipeRepository;
-        initializeRecipeCache(recipeRepository);
+
     }
 
-    private void initializeRecipeCache(RecipeRepository<T> recipeRepo) {
+    @PostConstruct
+    private void initializeRecipeCache() {
         if (recipesCache == null || recipesCache.isEmpty()) {
-            recipesCache = fetchAllRecipes(recipeRepo);
+            recipesCache = fetchAllRecipes(recipeRepository);
         }
     }
 
-    private Map<String, Recipe> fetchAllRecipes(RecipeRepository<T> recipeRepo) {
-        return recipeRepo.findAll().stream()
+    private Map<String, Recipe> fetchAllRecipes(RecipeRepository<T> recipeRepository) {
+        return recipeRepository.findAll().stream()
                 .collect(Collectors.toMap(Recipe::getId, recipe -> recipe));
     }
 
@@ -45,10 +47,10 @@ public abstract class RecipeDAO<T extends Recipe> {
             return null;
         }
 
-        addToCache(recipe);
-
         try {
-            return recipeRepository.save((T) recipe);
+            T savedRecipe = recipeRepository.save((T) recipe);
+            addToCache(savedRecipe);
+            return savedRecipe;
         } catch (ClassCastException e) {
             log.error("Recipe class cast exception: {}", this.getClass().getSimpleName());
             throw new RecipeSaveException(recipe.getName(), e);
@@ -68,7 +70,7 @@ public abstract class RecipeDAO<T extends Recipe> {
 
     public Recipe getRandomRecipe() {
         if (recipesCache == null || recipesCache.isEmpty()) {
-            initializeRecipeCache(recipeRepository);
+            recipesCache = fetchAllRecipes(recipeRepository);
             if(recipesCache == null || recipesCache.isEmpty()) {
                 return null;
             }

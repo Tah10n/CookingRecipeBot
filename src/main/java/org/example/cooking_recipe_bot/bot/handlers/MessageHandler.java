@@ -53,46 +53,7 @@ public class MessageHandler implements UpdateHandler {
         this.messageTranslator = messageTranslator;
     }
 
-    private void translateRecipeAndSave(Update update, String inputText, String sourceLanguage) {
-        Translate translate = TranslateOptions.getDefaultInstance().getService();
-        String targetLanguage = sourceLanguage.equals("en") ? "ru" : "en";
-        Translation translated = translate.translate(inputText, Translate.TranslateOption.sourceLanguage(sourceLanguage),
-                Translate.TranslateOption.targetLanguage(targetLanguage),
-                Translate.TranslateOption.model("base"),
-                Translate.TranslateOption.format("text"));
-        String translatedText = translated.getTranslatedText();
-        Recipe recipe;
-        try {
-            recipe = RecipeParser.parseRecipeFromString(translatedText, targetLanguage);
-            recipe.setDateOfCreation(new Date());
-            recipe.setDateOfLastEdit(new Date());
-        } catch (ParseException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
-            return;
-        }
-        if (checkIsRecipeAlreadyExists(recipe, targetLanguage)) {
-            log.error("Recipe already exists " + recipe.getName());
-        } else {
 
-            if (update.getMessage().hasPhoto()) {
-                String photoId = update.getMessage().getPhoto().stream()
-                        .max(Comparator.comparing(PhotoSize::getFileSize))
-                        .map(PhotoSize::getFileId).orElse(null);
-                recipe.setPhotoId(photoId);
-            } else if (update.getMessage().hasAnimation()) {
-                String animationId = update.getMessage().getAnimation().getFileId();
-                recipe.setAnimationId(animationId);
-            } else if (update.getMessage().hasVideo()) {
-                String videoId = update.getMessage().getVideo().getFileId();
-                recipe.setVideoId(videoId);
-            }
-
-            recipeDAOManager.getRecipeDAO(targetLanguage).saveRecipe(recipe);
-
-        }
-
-    }
 
     @Override
     public SendMessage handle(Update update) {
@@ -143,6 +104,46 @@ public class MessageHandler implements UpdateHandler {
         return sendMessage;
     }
 
+    private void translateRecipeAndSave(Update update, String inputText, String sourceLanguage) {
+        Translate translate = TranslateOptions.getDefaultInstance().getService();
+        String targetLanguage = sourceLanguage.equals("en") ? "ru" : "en";
+        Translation translated = translate.translate(inputText, Translate.TranslateOption.sourceLanguage(sourceLanguage),
+                Translate.TranslateOption.targetLanguage(targetLanguage),
+                Translate.TranslateOption.model("base"),
+                Translate.TranslateOption.format("text"));
+        String translatedText = translated.getTranslatedText();
+        Recipe recipe;
+        try {
+            recipe = RecipeParser.parseRecipeFromString(translatedText, targetLanguage);
+            recipe.setDateOfCreation(new Date());
+            recipe.setDateOfLastEdit(new Date());
+        } catch (ParseException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+            return;
+        }
+        if (checkIsRecipeAlreadyExists(recipe, targetLanguage)) {
+            log.error("Recipe already exists " + recipe.getName());
+        } else {
+
+            if (update.getMessage().hasPhoto()) {
+                String photoId = update.getMessage().getPhoto().stream()
+                        .max(Comparator.comparing(PhotoSize::getFileSize))
+                        .map(PhotoSize::getFileId).orElse(null);
+                recipe.setPhotoId(photoId);
+            } else if (update.getMessage().hasAnimation()) {
+                String animationId = update.getMessage().getAnimation().getFileId();
+                recipe.setAnimationId(animationId);
+            } else if (update.getMessage().hasVideo()) {
+                String videoId = update.getMessage().getVideo().getFileId();
+                recipe.setVideoId(videoId);
+            }
+
+            recipeDAOManager.getRecipeDAO(targetLanguage).saveRecipe(recipe);
+
+        }
+
+    }
     private void handleDefaultState(Update update, String inputText) {
         long userId = update.getMessage().getFrom().getId();
         long chatId = update.getMessage().getChatId();

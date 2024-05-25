@@ -95,7 +95,7 @@ public class InlineQueryHandler implements UpdateHandler {
         List<Recipe> recipes = recipeDAOManager.getRecipeDAO(language).findRecipesByString(query);
 
         for (Recipe recipe : recipes) {
-
+            if(recipe == null) continue;
             InlineQueryResultArticle article = InlineQueryResultArticle.builder()
                     .id(recipe.getId()).title(recipe.getName())
                     .inputMessageContent(InputTextMessageContent.builder()
