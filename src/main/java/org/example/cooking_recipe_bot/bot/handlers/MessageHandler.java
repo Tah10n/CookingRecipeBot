@@ -407,17 +407,24 @@ public class MessageHandler implements UpdateHandler {
     }
 
     private User createUser(Update update) {
+        User newUser = extractUserDetails(update);
+        newUser.setIsAdmin(userDAO.isFirstAdmin(newUser.getUserName()));
+        userDAO.saveUser(newUser);
+        return newUser;
+    }
+
+    private User extractUserDetails(Update update) {
         User user = new User();
-        String languageCode = update.getMessage().getFrom().getLanguageCode() == null ? "en" : update.getMessage().getFrom().getLanguageCode();
-        String userName = update.getMessage().getFrom().getUserName();
+        String languageCode = update.getMessage().getFrom().getLanguageCode();
+        if (languageCode == null || languageCode.isEmpty() || !languageCode.equals("ru") && !languageCode.equals("en")) {
+            languageCode = "en";
+        }
         user.setId(update.getMessage().getFrom().getId());
         user.setFirstName(update.getMessage().getFrom().getFirstName());
         user.setLastName(update.getMessage().getFrom().getLastName());
-        user.setUserName(userName);
-        user.setIsAdmin(userDAO.isFirstAdmin(userName));
+        user.setUserName(update.getMessage().getFrom().getUserName());
         user.setChatId(update.getMessage().getChatId());
         user.setLanguage(languageCode);
-        userDAO.saveUser(user);
         return user;
     }
 }
