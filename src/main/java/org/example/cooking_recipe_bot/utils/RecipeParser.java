@@ -4,8 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.RecipeEn;
 import org.example.cooking_recipe_bot.db.entity.RecipeRu;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
 import java.util.regex.Matcher;
@@ -41,7 +39,7 @@ public class RecipeParser {
         recipe.setName(name);
 
         // Extract the ingredients
-        Pattern ingredientPattern = Pattern.compile("[•-](.+)");
+        Pattern ingredientPattern = Pattern.compile("•(.+)");
         StringBuilder ingredientsBuilder = new StringBuilder();
         for (String line : lines) {
             Matcher ingredientMatcher = ingredientPattern.matcher(line);

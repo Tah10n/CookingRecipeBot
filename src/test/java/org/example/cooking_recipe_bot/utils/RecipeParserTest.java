@@ -27,7 +27,7 @@ class RecipeParserTest {
 
         Recipe recipe = null;
         try {
-            recipe = RecipeParser.parseRecipeFromString(recipeString);
+            recipe = RecipeParser.parseRecipeFromString(recipeString, "ru");
         } catch (ParseException e) {
             e.printStackTrace();
 
@@ -72,13 +72,13 @@ class RecipeParserTest {
 
         Recipe recipe = null;
         try {
-            recipe = RecipeParser.parseRecipeFromString(recipeString);
+            recipe = RecipeParser.parseRecipeFromString(recipeString, "ru");
         } catch (ParseException e) {
             e.printStackTrace();
 
         }
 
-        assertEquals("чесночное масло на все случаи жизни.", recipe.getName());
+        assertEquals("чесночное масло на все случаи жизни", recipe.getName());
         assertEquals("пачка вкусного хорошего сливочного масла\n" +
                 "2 чл крупной соли\n" +
                 "зелень, укроп/петрушка/лучок. прям пучок. мелко порезать\n" +
@@ -94,7 +94,7 @@ class RecipeParserTest {
     @Test
     void testParseRecipeFromString_EmptyRecipeString() {
         String recipeString = "";
-        assertThrowsExactly(ParseException.class, () -> RecipeParser.parseRecipeFromString(recipeString));
+        assertThrowsExactly(ParseException.class, () -> RecipeParser.parseRecipeFromString(recipeString, "ru"));
 
     }
 
@@ -107,7 +107,7 @@ class RecipeParserTest {
     @Test
     void testParseRecipeFromString_NoInstructions() {
         String recipeString = "Recipe Name\n• Ingredients\n#Hashtags";
-        assertThrows(ParseException.class, () -> RecipeParser.parseRecipeFromString(recipeString));
+        assertThrows(ParseException.class, () -> RecipeParser.parseRecipeFromString(recipeString, "ru"));
     }
 
 //    @Test

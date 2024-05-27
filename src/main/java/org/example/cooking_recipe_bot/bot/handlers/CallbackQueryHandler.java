@@ -479,7 +479,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         }
     }
 
-    private void deleteUser(CallbackQuery callbackQuery, long chatId, int messageId) {
+    public void deleteUser(CallbackQuery callbackQuery, long chatId, int messageId) {
         long userIdFromMessage = getUserIdFromMessage((Message) callbackQuery.getMessage());
         User user = userDAO.getUserById(userIdFromMessage);
         String message = String.format(messageTranslator.getMessage(BotMessageEnum.USER_WAS_DELETED_MESSAGE.name(), user.getLanguage()), user.getUserName());
@@ -537,6 +537,9 @@ public class CallbackQueryHandler implements UpdateHandler {
         Recipe recipe;
         RecipeDAO<?> recipeDAO = recipeDAOManager.getRecipeDAO(user.getLanguage());
         recipe = recipeDAO.findRecipeById(recipeId);
+        if(recipe == null) {
+            return;
+        }
         Double rating = recipe.getRating();
         if (rating == null) {
             rating = (double) ratingFromUser;
@@ -570,6 +573,9 @@ public class CallbackQueryHandler implements UpdateHandler {
 
     private long getUserIdFromMessage(Message message) {
         String text = message.getText();
+        if(text == null || text.isEmpty()) {
+            throw new IllegalArgumentException("Text is empty");
+        }
         User user = UserParser.parseUserFromString(text);
         return user.getId();
 

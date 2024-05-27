@@ -5,6 +5,7 @@ import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.repository.RecipeRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
@@ -39,7 +40,7 @@ public abstract class RecipeDAO<T extends Recipe> {
         return recipeRepository.findRecipesByNameEqualsIgnoreCase(name);
     }
 
-
+    @Transactional
     @SuppressWarnings("unchecked")
     public Recipe saveRecipe(Recipe recipe) {
         if (recipe == null) {
@@ -59,6 +60,7 @@ public abstract class RecipeDAO<T extends Recipe> {
         }
     }
 
+    @Transactional
     public void deleteRecipe(String recipeId) {
         recipesCache.remove(recipeId);
         recipeRepository.deleteRecipeById(recipeId);
@@ -71,7 +73,7 @@ public abstract class RecipeDAO<T extends Recipe> {
     public Recipe getRandomRecipe() {
         if (recipesCache == null || recipesCache.isEmpty()) {
             recipesCache = fetchAllRecipes(recipeRepository);
-            if(recipesCache == null || recipesCache.isEmpty()) {
+            if (recipesCache == null || recipesCache.isEmpty()) {
                 return null;
             }
         }
