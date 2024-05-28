@@ -1,12 +1,11 @@
 package org.example.cooking_recipe_bot.bot.keyboards;
 
-import org.example.cooking_recipe_bot.bot.constants.ButtonNameEnum;
 import org.example.cooking_recipe_bot.bot.MessageTranslator;
+import org.example.cooking_recipe_bot.bot.constants.ButtonNameEnum;
 import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.entity.User;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
@@ -134,5 +133,18 @@ public class InlineKeyboardMaker {
 
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(cancelButton, moreRecipesButton)).build();
+    }
+
+    public InlineKeyboardMarkup getRecipesButtonsKeyboard(List<Recipe> recipes) {
+        List<InlineKeyboardButton> buttons = new ArrayList<>();
+        for (Recipe recipe : recipes) {
+            InlineKeyboardButton button = InlineKeyboardButton.builder().text(recipe.getName()).callbackData("recipe_button:" + recipe.getId()).build();
+            buttons.add(button);
+        }
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        for (InlineKeyboardButton button : buttons) {
+            rows.add(new InlineKeyboardRow(button));
+        }
+        return InlineKeyboardMarkup.builder().keyboard(rows).build();
     }
 }

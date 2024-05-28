@@ -21,10 +21,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -262,6 +259,7 @@ public class ActionFactory {
     }
 
     public void sendRecipesList(Long userId, Long chatId, List<Recipe> recipes) {
+        int maxRecipesToDisplay = 20;
         User user = userDAO.getUserById(userId);
 
         if (recipes.isEmpty()) {
@@ -269,17 +267,42 @@ public class ActionFactory {
             return;
         }
 
-        if (recipes.size() > 4) {
-            for (int i = 0; i < 4; i++) {
-                sendRecipe(chatId, recipes.get(i), user);
-            }
-            sendMoreRecipesButton(chatId, user, recipes.subList(4, recipes.size()));
+        if (recipes.size() > 1) {
+            List<Recipe> sortedRecipes = new ArrayList<>(recipes);
+            sortedRecipes.sort(Comparator.comparing(Recipe::getName));
+            sendRecipesButtonsList(chatId, user, sortedRecipes);
+//            if(sortedRecipes.size() > maxRecipesToDisplay) {
+//                List<Recipe> recipesToSend = sortedRecipes.subList(0, maxRecipesToDisplay);
+//                sendRecipesButtonsList(chatId, user, recipesToSend);
+//
+//                List<Recipe> moreRecipes = sortedRecipes.subList(maxRecipesToDisplay, sortedRecipes.size());
+//                if(!moreRecipes.isEmpty()) {
+//                    sendMoreRecipesButton(chatId, user, moreRecipes);
+//                }
+//            } else {
+//                sendRecipesButtonsList(chatId, user, sortedRecipes);
+//            }
+
         } else {
             for (Recipe recipe : recipes) {
                 sendRecipe(chatId, recipe, user);
             }
         }
 
+    }
+
+    private void sendRecipesButtonsList(Long chatId, User user, List<Recipe> recipes) {
+        String message = String.format(messageTranslator.getMessage(BotMessageEnum.RECIPES_FOUNDED_MESSAGE.name(), user.getLanguage()), recipes.size());
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(chatId)
+                .text(message)
+                .replyMarkup(inlineKeyboardMaker.getRecipesButtonsKeyboard(recipes)).build();
+        try {
+            telegramClient.execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
+        }
     }
 
     private void sendMoreRecipesButton(Long chatId, User user, List<Recipe> recipes) {

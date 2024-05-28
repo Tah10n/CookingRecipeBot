@@ -36,6 +36,7 @@
   "WAITING_FOR_EDITED_RECIPE_MESSAGE": "Сотрите имя бота и отправьте отредактированный рецепт \uD83D\uDC47",
   "AVAILABLE_LANGUAGES_MESSAGE": "Доступные языки:",
   "LANGUAGE_WAS_CHANGED_MESSAGE": "Язык изменен",
+  "RECIPES_FOUNDED_MESSAGE": "Найдено рецептов: %d",
 
   "HELP_BUTTON": "Помощь",
   "FIND_RECIPE_BUTTON": "Найти рецепт",

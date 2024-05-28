@@ -137,6 +137,9 @@ public class CallbackQueryHandler implements UpdateHandler {
             case "language_en_button":
                 switchToLanguage(callbackQuery, chatId, messageId, "en");
                 break;
+            case "recipe_button":
+                recipeButtonAction(callbackQuery, chatId, messageId, user);
+                    break;
             default:
                 log.error("{} Unexpected value in switch: {}", this.getClass().getName(), action);
                 botStateContextDAO.changeBotState(userId, BotState.DEFAULT);
@@ -144,6 +147,23 @@ public class CallbackQueryHandler implements UpdateHandler {
         }
 
         return null;
+    }
+
+    private void recipeButtonAction(CallbackQuery callbackQuery, long chatId, int messageId, User user) {
+        String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
+        Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
+        if (recipe == null) {
+            SendMessage sendMessage = SendMessage.builder().chatId(chatId)
+                    .text(messageTranslator.getMessage(RECIPE_NOT_FOUND_MESSAGE.name(), user.getLanguage())).build();
+            try {
+                telegramClient.execute(sendMessage);
+            } catch (TelegramApiException e) {
+                log.error(e.getMessage());
+                log.error(Arrays.toString(e.getStackTrace()));
+            }
+        } else {
+            actionFactory.sendRecipesList(user.getId(), chatId, List.of(recipe));
+        }
     }
 
 

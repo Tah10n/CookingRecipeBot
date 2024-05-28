@@ -36,6 +36,7 @@
   "WAITING_FOR_EDITED_RECIPE_MESSAGE": "Delete bot name and send edited recipe \uD83D\uDC47",
   "AVAILABLE_LANGUAGES_MESSAGE": "Available languages:",
   "LANGUAGE_WAS_CHANGED_MESSAGE": "Language was changed",
+  "RECIPES_FOUNDED_MESSAGE": "Recipes founded: %d",
 
   "HELP_BUTTON": "Help",
   "FIND_RECIPE_BUTTON": "Find Recipe",
