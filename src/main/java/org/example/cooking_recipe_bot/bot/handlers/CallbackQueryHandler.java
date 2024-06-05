@@ -138,7 +138,7 @@ public class CallbackQueryHandler implements UpdateHandler {
                 switchToLanguage(callbackQuery, chatId, messageId, "en");
                 break;
             case "recipe_button":
-                recipeButtonAction(callbackQuery, chatId, messageId, user);
+                recipeButtonAction(callbackQuery, chatId, user);
                     break;
             default:
                 log.error("{} Unexpected value in switch: {}", this.getClass().getName(), action);
@@ -149,7 +149,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         return null;
     }
 
-    private void recipeButtonAction(CallbackQuery callbackQuery, long chatId, int messageId, User user) {
+    private void recipeButtonAction(CallbackQuery callbackQuery, long chatId, User user) {
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
         Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
         if (recipe == null) {
@@ -241,14 +241,14 @@ public class CallbackQueryHandler implements UpdateHandler {
         long userId = callbackQuery.getFrom().getId();
         User user = userDAO.getUserById(userId);
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
+        Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
         String message = messageTranslator.getMessage(BotMessageEnum.SEND_ME_VIDEO_MESSAGE.name(), user.getLanguage());
         SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(message)
                 .replyMarkup(inlineKeyboardMaker.getCancelKeyboard(user)).build();
         try {
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
+            logError(e,recipe.getName());
         }
         botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_VIDEO, recipeId);
     }
@@ -257,14 +257,14 @@ public class CallbackQueryHandler implements UpdateHandler {
         long userId = callbackQuery.getFrom().getId();
         User user = userDAO.getUserById(userId);
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
+        Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
         String message = messageTranslator.getMessage(BotMessageEnum.SEND_ME_PHOTO_MESSAGE.name(), user.getLanguage());
         SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(message)
                 .replyMarkup(inlineKeyboardMaker.getCancelKeyboard(user)).build();
         try {
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
+            logError(e,recipe.getName());
         }
 
         botStateContextDAO.changeBotState(userId, BotState.WAITING_FOR_PHOTO, recipeId);
@@ -283,6 +283,7 @@ public class CallbackQueryHandler implements UpdateHandler {
     private void yesForDeleteRecipe(CallbackQuery callbackQuery, long chatId, int messageId, User user) {
         int previousMessageId = Integer.parseInt(callbackQuery.getData().substring(callbackQuery.getData().indexOf(":") + 1, callbackQuery.getData().lastIndexOf(":")));
         String recipeId = callbackQuery.getData().substring(callbackQuery.getData().lastIndexOf(":") + 1);
+        Recipe recipe = recipeDAOManager.getRecipeDAO(user.getLanguage()).findRecipeById(recipeId);
         recipeDAOManager.getRecipeDAO(user.getLanguage()).deleteRecipe(recipeId);
 
         DeleteMessage deleteMessage1 = DeleteMessage.builder().chatId(chatId).messageId(messageId).build();
@@ -293,8 +294,7 @@ public class CallbackQueryHandler implements UpdateHandler {
             telegramClient.execute(deleteMessage2);
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
+            logError(e,recipe.getName());
         }
     }
 
@@ -338,7 +338,7 @@ public class CallbackQueryHandler implements UpdateHandler {
                 telegramClient.execute(editMessageText);
             }
         } catch (TelegramApiException e) {
-            logError(e);
+            logError(e,recipe.getName());
         }
     }
 
@@ -350,23 +350,36 @@ public class CallbackQueryHandler implements UpdateHandler {
         }
     }
 
-    private void handleMediaMessage(long chatId, int messageId, long userId, Recipe recipe, List<MessageEntity> messageEntities) throws TelegramApiException {
+    private void handleMediaMessage(long chatId, int messageId, long userId, Recipe recipe, List<MessageEntity> messageEntities) {
         if (recipe.getAnimationId() != null && !recipe.getAnimationId().isEmpty()) {
             EditMessageMedia editMessageMedia = EditMessageMedia.builder()
                     .chatId(chatId)
                     .messageId(messageId - 1)
                     .media(new InputMediaAnimation(recipe.getAnimationId()))
                     .build();
-            telegramClient.execute(editMessageMedia);
+            try {
+                telegramClient.execute(editMessageMedia);
+            } catch (TelegramApiException e) {
+                logError(e, recipe.getName());
+            }
+
         } else if (recipe.getVideoId() != null && !recipe.getVideoId().isEmpty()) {
             EditMessageMedia editMessageMedia = EditMessageMedia.builder()
                     .chatId(chatId)
                     .messageId(messageId - 1)
                     .media(new InputMediaVideo(recipe.getVideoId()))
                     .build();
-            telegramClient.execute(editMessageMedia);
+            try {
+                telegramClient.execute(editMessageMedia);
+            } catch (TelegramApiException e) {
+                logError(e, recipe.getName());
+            }
         }
-        editTextMessageWithEntities(chatId,messageId, userId, recipe, messageEntities);
+        try {
+            editTextMessageWithEntities(chatId,messageId, userId, recipe, messageEntities);
+        } catch (TelegramApiException e) {
+            logError(e, recipe.getName());
+        }
     }
 
     private void handleNonMediaMessage(long chatId, int messageId, long userId, Recipe recipe, List<MessageEntity> messageEntities) throws TelegramApiException {
@@ -427,8 +440,8 @@ public class CallbackQueryHandler implements UpdateHandler {
         telegramClient.execute(editMessageText);
     }
 
-    private void logError(TelegramApiException e) {
-        log.error(e.getMessage());
+    private void logError(TelegramApiException e, String recipeName) {
+        log.error("{} recipe: {}", e.getMessage(), recipeName);
         log.error(Arrays.toString(e.getStackTrace()));
     }
 
@@ -442,7 +455,8 @@ public class CallbackQueryHandler implements UpdateHandler {
         try {
             telegramClient.execute(sendMessage);
         } catch (TelegramApiException e) {
-            logError(e);
+            log.error(e.getMessage());
+            log.error(Arrays.toString(e.getStackTrace()));
         }
     }
 
@@ -527,16 +541,14 @@ public class CallbackQueryHandler implements UpdateHandler {
                 try {
                     telegramClient.execute(editMessageMedia);
                 } catch (TelegramApiException e) {
-                    log.error(e.getMessage());
-                    log.error(Arrays.toString(e.getStackTrace()));
+                    logError(e, recipe.getName());
                 }
             } else {
                 deleteMessage = DeleteMessage.builder().chatId(chatId).messageId(messageId - 1).build();
                 try {
                     telegramClient.execute(deleteMessage);
                 } catch (TelegramApiException e) {
-                    log.error(e.getMessage());
-                    log.error(Arrays.toString(e.getStackTrace()));
+                    logError(e, recipe.getName());
                 }
             }
 
@@ -577,8 +589,7 @@ public class CallbackQueryHandler implements UpdateHandler {
         try {
             telegramClient.execute(editMessageText);
         } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-            log.error(Arrays.toString(e.getStackTrace()));
+            logError(e, recipe.getName());
         }
     }
 
@@ -591,7 +602,7 @@ public class CallbackQueryHandler implements UpdateHandler {
     }
 
 
-    private long getUserIdFromMessage(Message message) {
+    protected long getUserIdFromMessage(Message message) {
         String text = message.getText();
         if(text == null || text.isEmpty()) {
             throw new IllegalArgumentException("Text is empty");

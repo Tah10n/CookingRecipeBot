@@ -5,13 +5,14 @@ import org.example.cooking_recipe_bot.db.entity.Recipe;
 import org.example.cooking_recipe_bot.db.repository.RecipeRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
+@Service
 public abstract class RecipeDAO<T extends Recipe> {
     private static final Logger log = LoggerFactory.getLogger(RecipeDAO.class);
     private final RecipeRepository<T> recipeRepository;

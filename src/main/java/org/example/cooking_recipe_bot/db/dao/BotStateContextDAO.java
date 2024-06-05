@@ -3,12 +3,14 @@ package org.example.cooking_recipe_bot.db.dao;
 import org.example.cooking_recipe_bot.bot.BotState;
 import org.example.cooking_recipe_bot.db.entity.BotStateContext;
 import org.example.cooking_recipe_bot.db.repository.BotStateContextRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class BotStateContextDAO {
     private final BotStateContextRepository botStateContextRepository;
 
+    @Autowired
     public BotStateContextDAO(BotStateContextRepository botStateContextRepository) {
         this.botStateContextRepository = botStateContextRepository;
     }

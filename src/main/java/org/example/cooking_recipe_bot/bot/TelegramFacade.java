@@ -12,6 +12,7 @@ import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -32,7 +33,7 @@ public class TelegramFacade {
     }
 
 
-    public BotApiMethod<?> handleUpdate(Update update) {
+    public BotApiMethod<? extends Serializable> handleUpdate(Update update) {
         UpdateHandler updateHandler;
         if (update.hasInlineQuery()) {
             updateHandler = inlineQueryHandler;

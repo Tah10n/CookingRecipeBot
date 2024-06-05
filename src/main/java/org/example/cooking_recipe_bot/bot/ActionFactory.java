@@ -345,7 +345,7 @@ public class ActionFactory {
             try {
                 telegramClient.execute(sendPhoto);
             } catch (TelegramApiException e) {
-                log.error(e.getMessage());
+                log.error("{}, recipe: {}", e.getMessage(), recipe.getName());
                 log.error(Arrays.toString(e.getStackTrace()));
             }
         }
